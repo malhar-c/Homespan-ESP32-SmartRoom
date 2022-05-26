@@ -37,7 +37,7 @@
 #include "HomeSpan.h" 
 #include "DEV_Switches.h"
 #include "DEV_Fan_Regulator.h"
-#include "DEV_AC.h"   
+#include "DEV_AC.h"
 
 void setup() {
 
@@ -86,6 +86,8 @@ void setup() {
 
   // OLED_init(); //Initialize the OLED display... defined in OLED_config.h
   setup_init();
+  // time init (get time from ntp server) // written in time_management.h
+  time_init();
 
   homeSpan.begin(Category::Bridges,"Smart Room");
   
@@ -148,4 +150,15 @@ void setup() {
 void loop(){
   
   homeSpan.poll();
+
+  if(a_minute_passed() == true)
+  {
+    printLocalTime(); //for debugging
+    // update_time_hh_mm(); //for debgggg
+  }
+
+  // Serial.print(current_time);
+  // Serial.print(" ");
+  // Serial.println(previous_time);
+
 } // end of loop()
