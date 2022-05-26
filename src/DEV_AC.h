@@ -29,7 +29,7 @@ void setup_init()
   ac.setTemp(25);
   ac.setSwingV(true);
   Serial.begin(115200);
-  // OLED_init();
+  OLED_init();
   // test_OLED();
 }
 

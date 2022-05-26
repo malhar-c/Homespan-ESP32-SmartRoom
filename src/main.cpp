@@ -84,7 +84,8 @@ void setup() {
 
   Serial.begin(115200);
 
-  OLED_init(); //Initialize the OLED display... defined in OLED_config.h
+  // OLED_init(); //Initialize the OLED display... defined in OLED_config.h
+  setup_init();
 
   homeSpan.begin(Category::Bridges,"Smart Room");
   
