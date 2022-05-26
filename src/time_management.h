@@ -9,6 +9,8 @@ const int   daylightOffset_sec = 3600;
 // millis() implementation config
 unsigned long previous_time = 0;
 unsigned long current_time =  millis();
+unsigned short previous_time_s = 0;
+unsigned short current_time_s =  millis();
 
 short hours = 0;
 short minutes = 0;
@@ -67,16 +69,23 @@ bool a_minute_passed()
   }
 }
 
-//This function will return true once every second
-//Those method needs to be called/updated once in a second can utilize this
+//This function will return true once every 2 seconds
+//Those method needs to be called/updated once in two second can utilize this
+//This will overflow every minute-ish and reset itself
 //**non-blocking implementation
-bool a_second_passed()
+bool two_second_passed()
 {
-  if(current_time - previous_time >= 1000)
+  current_time_s = millis();
+  if(previous_time_s > current_time_s) //USHRT_MAX	Maximum value for a variable of type unsigned short .	65535
   {
-    previous_time = current_time;
+    previous_time_s = 0;
+  }
+  if(current_time_s - previous_time_s >= 2000)
+  {
+    previous_time_s = current_time_s;
     return true;
-  }else{
+  }
+  else{
     return false;
   }
 }

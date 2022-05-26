@@ -157,8 +157,8 @@ void loop(){
     // update_time_hh_mm(); //for debgggg
   }
 
-  // Serial.print(current_time);
+  // Serial.print(current_time_s);
   // Serial.print(" ");
-  // Serial.println(previous_time);
+  // Serial.println(previous_time_s);
 
 } // end of loop()
