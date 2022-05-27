@@ -158,7 +158,7 @@ struct DEV_Smart_AC : Service::HeaterCooler
 
   void loop()  //always runs as long as the homeSpan.poll() runs
   {
-    if(two_second_passed() == true)
+    if(curr_temp->timeVal() > 2000)
     {
       curr_temp->setVal(dht.readTemperature());
       Serial.print("temp: ");
@@ -192,11 +192,21 @@ struct DEV_Humidity : Service::HumiditySensor {
 
   void loop()
   {
-    if(two_second_passed() == true)
+    // Serial.println(two_second_passed());
+    // Serial.print(current_time_s);
+    // Serial.print(" ");
+    // Serial.println(previous_time_s);
+    
+    if(curr_hum->timeVal() > 2000)  //if the humidity is last updated more than 2s Update it
     {
       curr_hum->setVal(dht.readHumidity());
       Serial.print("hum: ");
+      // Serial.println(curr_hum->getNewVal());
       Serial.println(dht.readHumidity());
     }
+
+    //for debuggg
+    // Serial.print("Last time Humidity was updated : ");
+    // Serial.println(curr_hum->timeVal());
   }
 };

@@ -73,19 +73,20 @@ bool a_minute_passed()
 //Those method needs to be called/updated once in two second can utilize this
 //This will overflow every minute-ish and reset itself
 //**non-blocking implementation
-bool two_second_passed()
-{
-  current_time_s = millis();
-  if(previous_time_s > current_time_s) //USHRT_MAX	Maximum value for a variable of type unsigned short .	65535
-  {
-    previous_time_s = 0;
-  }
-  if(current_time_s - previous_time_s >= 2000)
-  {
-    previous_time_s = current_time_s;
-    return true;
-  }
-  else{
-    return false;
-  }
-}
+//***DEPECRATED***
+// bool two_second_passed()
+// {
+//   current_time_s = millis();
+//   if(previous_time_s > current_time_s) 
+//   {
+//     previous_time_s = 0;
+//   }
+//   if(current_time_s - previous_time_s >= 2000)
+//   {
+//     previous_time_s = current_time_s;
+//     return true;
+//   }
+//   else{
+//     return false;
+//   }
+// }
