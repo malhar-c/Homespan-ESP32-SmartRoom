@@ -7,31 +7,35 @@
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
-// The pins for I2C are defined by the Wire-library. 
-// On an arduino UNO:       A4(SDA), A5(SCL)
-// On an arduino MEGA 2560: 20(SDA), 21(SCL)
-// On an arduino LEONARDO:   2(SDA),  3(SCL), ...
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 Adafruit_SSD1306 display (SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
+//for all time related operations
+#include "time_management.h"
+
+//function prototypes
+void splash();
+bool display_time_large();
+bool dipslay_time_small();
 
 void OLED_init()
 {
     display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);
     display.clearDisplay();
+    splash();
 }
 
 // void test_OLED() //this is for debugging purpose only
 // {
-//     display.setTextSize(4);             // Normal 1:1 pixel scale
-//     display.setTextColor(SSD1306_WHITE);        // Draw white text
-//     display.setCursor(0,0);             
-//     display.print(F("24"));
-//     display.setTextSize(1);
-//     display.print(F("o")); //degree symbol
-//     display.setTextSize(2);
-//     display.println(F(" C"));
+    // display.setTextSize(4);             // Normal 1:1 pixel scale
+    // display.setTextColor(SSD1306_WHITE);        // Draw white text
+    // display.setCursor(0,0);             
+    // display.print(F("24"));
+    // display.setTextSize(1);
+    // display.print(F("o")); //degree symbol
+    // display.setTextSize(2);
+    // display.println(F(" C"));
 
 // //  display.setTextColor(SSD1306_BLACK, SSD1306_WHITE); // Draw 'inverse' text
 // //  display.println(3.141592);
@@ -43,6 +47,22 @@ void OLED_init()
 //     display.display();
 // }
 
+//Splash screen when the device turns on / reboot
+void splash()
+{
+    display.setTextSize(1);             // Normal 1:1 pixel scale
+    display.setTextColor(SSD1306_WHITE);        // Draw white text
+    display.setCursor(20,5);             
+    display.print(F("* Smart Home *"));
+    display.setCursor(37,15); 
+    display.setTextSize(1);
+    display.print(F("ESP - 32")); //degree symbol
+    display.setTextSize(1);
+    // display.setTextColor(SSD1306_WHITE);
+    display.setCursor(25,25);
+    display.print(F("Apple Homekit"));
+    display.display();
+}
 
 void display_climate(int temp, bool AC_status)
 {
@@ -76,7 +96,7 @@ void update_mode(int M)
     // update the AC mode display
 }
 
-int get_seconds()
+void display_time()
 {
-    return 0;
+
 }

@@ -29,7 +29,7 @@ void setup_init()
   ac.setTemp(25);
   ac.setSwingV(true);
   Serial.begin(115200);
-  // OLED_init();
+  OLED_init();
   // test_OLED();
 }
 
@@ -47,7 +47,7 @@ struct DEV_Smart_AC : Service::HeaterCooler
   {
 
     active=new Characteristic::Active(0, true);
-      curr_temp=new Characteristic::CurrentTemperature();
+      curr_temp=new Characteristic::CurrentTemperature(dht.readTemperature());
       curr_state=new Characteristic::CurrentHeaterCoolerState(3); //0-inactive 1-idle, 2-heating, 3-cooling
       mode=new Characteristic::TargetHeaterCoolerState(0, true); //0-Auto 1-Heat 2-Cool
       set_cooling_temp=(new Characteristic::CoolingThresholdTemperature(25, true))->setRange(16,31,1);
@@ -146,9 +146,9 @@ struct DEV_Smart_AC : Service::HeaterCooler
     // delay(500);
 
     //for debugging
-    Serial.println("Hitachi A/C remote is in the following state:");
-    Serial.println(set_cooling_temp->getNewVal());
-    Serial.println(active->getNewVal());
+    // Serial.println("Hitachi A/C remote is in the following state:");
+    // Serial.println(set_cooling_temp->getNewVal());
+    // Serial.println(active->getNewVal());
     display_climate(set_cooling_temp->getNewVal(), active->getNewVal());
     Serial.printf("  %s\n", ac.toString().c_str());
 
@@ -158,11 +158,12 @@ struct DEV_Smart_AC : Service::HeaterCooler
 
   void loop()  //always runs as long as the homeSpan.poll() runs
   {
-    if(dht.readTemperature() > 10 && dht.readTemperature() < 60)
+    if(curr_temp->timeVal() > 2000)
     {
       curr_temp->setVal(dht.readTemperature());
+      Serial.print("temp: ");
+      Serial.println(dht.readTemperature());
     }
-    delay(1);
   }
 };
 
@@ -177,7 +178,7 @@ struct DEV_Humidity : Service::HumiditySensor {
   DEV_Humidity() : Service::HumiditySensor()
   {       // constructor() method
 
-    curr_hum=new Characteristic::CurrentRelativeHumidity();                      
+    curr_hum=new Characteristic::CurrentRelativeHumidity(dht.readHumidity());                      
     
   } // end constructor
 
@@ -191,10 +192,21 @@ struct DEV_Humidity : Service::HumiditySensor {
 
   void loop()
   {
-    if(dht.readHumidity() > 0 && dht.readHumidity() < 100)
+    // Serial.println(two_second_passed());
+    // Serial.print(current_time_s);
+    // Serial.print(" ");
+    // Serial.println(previous_time_s);
+    
+    if(curr_hum->timeVal() > 2000)  //if the humidity is last updated more than 2s Update it
     {
       curr_hum->setVal(dht.readHumidity());
+      Serial.print("hum: ");
+      // Serial.println(curr_hum->getNewVal());
+      Serial.println(dht.readHumidity());
     }
-    delay(1);
+
+    //for debuggg
+    // Serial.print("Last time Humidity was updated : ");
+    // Serial.println(curr_hum->timeVal());
   }
 };
