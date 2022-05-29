@@ -14,10 +14,18 @@ Adafruit_SSD1306 display (SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 //for all time related operations
 #include "time_management.h"
 
+//for custom logos / icons
+#include "custom_icons/cool.h"
+#include "custom_icons/fan_auto.h"
+#include "custom_icons/fan_min.h"
+#include "custom_icons/fan_mid.h"
+#include "custom_icons/fan_max.h"
+
 //function prototypes
 void splash();
-bool display_time_large();
-bool dipslay_time_small();
+void display_time_large();
+void AC_mode_display(int);
+void AC_fan_settings_display(int);
 
 void OLED_init()
 {
@@ -64,12 +72,11 @@ void splash()
     display.display();
 }
 
-void display_climate(int temp, bool AC_status)
+void display_stuff(int temp, bool active, int AC_mode, int fan_speed)
 {
   //set and update the OLED display with temp, humidity, etc
   // if the AC is on, display the AC set temp, else display time and the current temp
-
-  if(AC_status) //when the AC is on
+  if(active)
   {
       display.clearDisplay();
       display.setTextSize(4);             // Normal 1:1 pixel scale
@@ -77,26 +84,82 @@ void display_climate(int temp, bool AC_status)
       display.setCursor(0,0);             
       display.print(temp);
       display.setTextSize(1);
-      display.print(F("o")); //degree symbol
+      display.print(F("o")); //degree symbol       
       display.setTextSize(2);
-      display.println(F(" C"));   
+      display.println(F(" C"));
+      AC_mode_display(AC_mode);
+      AC_fan_settings_display(fan_speed);
+      display.display();
   }
   else{
-      display.clearDisplay();
-      display.setTextSize(3);             // Normal 1:1 pixel scale
-      display.setTextColor(SSD1306_WHITE);        // Draw white text
-      display.setCursor(0,0);             
-      display.print(F("OFF"));
+      display_time_large();
   }
-  display.display();
 }
 
-void update_mode(int M)
+void AC_mode_display(int mode) //0-auto 1-heat/fan 2-cool
 {
-    // update the AC mode display
+    switch (mode)
+    {
+    case 0:
+        /* code */
+        break;
+    case 1:
+        //fan mode logo show
+        break;
+
+    case 2:
+        display.drawBitmap(109, 0, cool_bmp, cool_width, cool_height, 1);
+        break;
+
+    default:
+        break;
+    }
 }
 
-void display_time()
+void AC_fan_settings_display(int speed)
 {
+    Serial.print("Fan Mode Value: ");
+    Serial.println(speed);
+    switch(speed) //0-auto 1-low 2-med 3-high
+    {
+        case 0: 
+            display.drawBitmap(89, 17, fan_auto_bmp, fan_auto_width, fan_auto_height, 1);
+            break;
+        case 1: 
+            display.drawBitmap(89, 17, fan_min_bmp, fan_min_width, fan_min_height, 1);
+            break;
+        case 2: 
+            display.drawBitmap(89, 17, fan_mid_bmp, fan_mid_width, fan_mid_height, 1);
+            break;
+        case 3: 
+            display.drawBitmap(89, 17, fan_max_bmp, fan_max_width, fan_max_height, 1);
+            break;
+    }
+}
 
+void display_time_large()
+{
+    display.clearDisplay();
+    if(update_time_hh_mm())
+    {
+        display.setTextSize(2);             // Normal 1:1 pixel scale
+        display.setTextColor(SSD1306_WHITE);        // Draw white text
+        display.setCursor(0,10);             
+        // display.print(F("OFF"));
+        display.print(hours);
+        display.print(F(":"));
+        display.print(minutes);
+        display.display();
+
+        // display.drawBitmap(100, 0, cool_bmp, cool_width, cool_height, 1);
+        // // display.drawBitmap(89, 20, fan_auto_bmp, fan_auto_width, fan_auto_height, 1);
+        // display.display();
+        
+        //for debuggg
+        // Serial.println("update time display called");
+        // Serial.print(hours);
+        // Serial.print(":");
+        // Serial.println(minutes);
+        // printLocalTime(); //for debugging
+    }
 }

@@ -151,11 +151,11 @@ void loop(){
   
   homeSpan.poll();
 
-  if(a_minute_passed() == true)
-  {
-    printLocalTime(); //for debugging
-    // update_time_hh_mm(); //for debgggg
-  }
+  // if(a_minute_passed() == true)
+  // {
+  //   printLocalTime(); //for debugging
+  //   // update_time_hh_mm(); //for debgggg
+  // }
 
   // Serial.print(current_time_s);
   // Serial.print(" ");
