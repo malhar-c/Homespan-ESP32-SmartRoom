@@ -1,9 +1,9 @@
 //ntp time getting config
 #include <time.h>
 
-const char* ntpServer = "pool.ntp.org";
-const long  gmtOffset_sec = 18030;
-const int   daylightOffset_sec = 3600;
+const char* ntpServer = "in.pool.ntp.org";
+const long  gmtOffset_sec = 19800;
+const int   daylightOffset_sec = 0;
 //ntp config ends
 
 // millis() implementation config

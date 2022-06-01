@@ -53,7 +53,7 @@ struct DEV_Smart_AC : Service::HeaterCooler
       curr_state=new Characteristic::CurrentHeaterCoolerState(3); //0-inactive 1-idle, 2-heating, 3-cooling
       mode=new Characteristic::TargetHeaterCoolerState(0, true); //0-Auto 1-Heat 2-Cool
       set_cooling_temp=(new Characteristic::CoolingThresholdTemperature(25, true))->setRange(16,31,1);
-      fan_speed=new Characteristic::RotationSpeed(65, true);
+      fan_speed=new Characteristic::RotationSpeed(50);
       swing_on_off=new Characteristic::SwingMode(0, true); //0 - disable 1- enable
       new Characteristic::TemperatureDisplayUnits(); //0-Celsius 1-Fahrenheit
 
