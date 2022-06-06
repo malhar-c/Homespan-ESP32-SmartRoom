@@ -33,6 +33,17 @@ void setup_init()
   // test_OLED();
 }
 
+short AC_Fan_speed = 0; //30 - low, 60- medium, 90-high
+bool AC_Fan_state; //autop or manual
+bool AC_Swing_mode = 0; //0-off, 1-on
+
+short fan_speed_for_display = 0; //auto
+
+short AC_mode;
+short AC_prev_mode = 0;
+bool AC_on_off = 0;
+short AC_set_temp;
+
 struct DEV_Smart_AC : Service::HeaterCooler 
 {
   SpanCharacteristic *active;
@@ -40,10 +51,8 @@ struct DEV_Smart_AC : Service::HeaterCooler
   SpanCharacteristic *curr_state;
   SpanCharacteristic *mode;
   SpanCharacteristic *set_cooling_temp;
-  SpanCharacteristic *fan_speed;
-  SpanCharacteristic *swing_on_off;
-
-  int fan_speed_for_display = 0; //auto
+  // SpanCharacteristic *fan_speed;
+  // SpanCharacteristic *swing_on_off;
 
   DEV_Smart_AC() : Service::HeaterCooler()
   {
@@ -53,9 +62,8 @@ struct DEV_Smart_AC : Service::HeaterCooler
       curr_state=new Characteristic::CurrentHeaterCoolerState(3); //0-inactive 1-idle, 2-heating, 3-cooling
       mode=new Characteristic::TargetHeaterCoolerState(0, true); //0-Auto 1-Heat 2-Cool
       set_cooling_temp=(new Characteristic::CoolingThresholdTemperature(25, true))->setRange(16,31,1);
-      fan_speed=new Characteristic::RotationSpeed(50);
-      swing_on_off=new Characteristic::SwingMode(0, true); //0 - disable 1- enable
-      new Characteristic::TemperatureDisplayUnits(); //0-Celsius 1-Fahrenheit
+      // fan_speed=new Characteristic::RotationSpeed(50);
+      // swing_on_off=new Characteristic::SwingMode(0, true); //0 - disable 1- enable
 
     pinMode(kIrLed, OUTPUT);
     update(); //to run at first boot
@@ -67,88 +75,131 @@ struct DEV_Smart_AC : Service::HeaterCooler
     // digitalWrite(relayPin,power->getNewVal());     
     // Serial.println(mode->getNewVal());
 
+    AC_mode = mode->getNewVal();
+
+    //detect auto mode switch
+    if(set_cooling_temp->getNewVal() != 25 && mode->getNewVal() == 0 && AC_prev_mode != 0)
+    {
+      //for debugg
+      // Serial.println("DETECT AUTO MODE CHANGE and set the temp as 25 Forcefully");
+      // Serial.print("Current Switched Mode: ");
+      // Serial.println(mode->getNewVal());
+      // Serial.print("Previous Mode: ");
+      // Serial.println(AC_prev_mode);
+      set_cooling_temp->setVal(25);
+    }
+    
+    if(set_cooling_temp->getNewVal() != 25 && AC_prev_mode == 0)
+    {
+      //for debugg
+      mode->setVal(2); //force COOL mode
+      // Serial.println("FORCE COOL MODE CHANGE when Temp changed from 25 and prev mode was auto");
+      // Serial.print("Current Switched Mode: ");
+      // Serial.println(mode->getNewVal());
+      // Serial.print("Previous Mode: ");
+      // Serial.println(AC_prev_mode);
+    }
+
+
+    // if(mode->getNewVal() == 0)
+    // {
+    //   set_cooling_temp->setVal(25);
+    // }
+    
+    // if((set_cooling_temp->getNewVal()) != 25)
+    // {
+    //   mode->setVal(2); //force COOL mode
+    // }
+
     if((active->getNewVal()) == 1)
     {
       //send data through IR and update the OLED display only when the AC is active
       ac.on();
+      AC_on_off = 1;
       // ac.send();
-
-      if(mode->getNewVal() == 0) //Mode - Auto
+      switch (mode->getNewVal())
       {
+      case 0: //mode- auto
+        Serial.println("### Case 0: AUTO MODE BABY ###");
+        Serial.print("AC_Fan_state : ");
+        Serial.println(AC_Fan_state);
+        AC_Fan_state = 0;
+        AC_Swing_mode = 1; //auto mode has V swing turned on, so settingt his variable to access it in the fan fn
         ac.setMode(kHitachiAc1Auto);
-        ac.setFan(kHitachiAc1FanAuto);
         fan_speed_for_display = 0;
-        set_cooling_temp->setVal(25); //in Auto Mode Hitachi temp setting is not allowed and is locked to 25C
-        swing_on_off->setVal(1); //swing is on by default in auto mode
-      }
-  
-      else if(mode->getNewVal() == 1)  //Mode - Heat (will trigger Fan mode)
-      {
+        // set_cooling_temp->setVal(25);
+        break;
+
+      case 1: //heating in Home app, but will trigger AC fan mode
+        Serial.println("### Case 1: FAN MODE - HEATING MODE IN HOME ###");
+        Serial.print("AC_Fan_state : ");
+        Serial.println(AC_Fan_state);
         ac.setMode(kHitachiAc1Fan);
-        //Setting Fan Speed according to the controller
-        if(fan_speed->getNewVal() > 80) //Fan High
+        if(AC_Fan_state == 0) //if auto
         {
-          ac.setFan(kHitachiAc1FanHigh);
-          fan_speed_for_display = 3;
+          ac.setFan(kHitachiAc1FanAuto);
         }
-        else if(fan_speed->getNewVal() < 80 && fan_speed->getNewVal() > 40)
+        if (AC_Fan_state == 1) //manual
         {
-          ac.setFan(kHitachiAc1FanMed);
-          fan_speed_for_display = 2;
+          switch(AC_Fan_speed)  //change the fan speed according to set speed from dedicated fan service
+          {
+          case 90:
+            ac.setFan(kHitachiAc1FanHigh);
+            fan_speed_for_display = 3;
+            break;
+          case 60:
+            ac.setFan(kHitachiAc1FanMed);
+            fan_speed_for_display = 2;
+            break;
+          case 30:
+            ac.setFan(kHitachiAc1FanLow);
+            fan_speed_for_display = 1;
+            break;
+          }
         }
-        else
-        {
-          ac.setFan(kHitachiAc1FanLow);
-          fan_speed_for_display = 1;
-        }
+        break;
 
-        //setting V Swing
-        if(swing_on_off->getNewVal() ==1)
-        {
-          //swing on
-          ac.setSwingV(true);
-        }
-        else{
-          ac.setSwingV(false);
-        }
-      }
-
-      else if(mode->getNewVal() == 2)  //Mode - Cool (will trigger Cool mode)
-      {
+      case 2: //cool mode
+        Serial.println("### Case 2: COOL MODE ###");
+        Serial.print("AC_Fan_state : ");
+        Serial.println(AC_Fan_state);
         ac.setMode(kHitachiAc1Cool);
-        ac.setTemp(set_cooling_temp->getNewVal()); //set the temp as per controller
-
-        //Setting Fan Speed according to the controller
-        if(fan_speed->getNewVal() > 80) //Fan High
+        ac.setTemp(set_cooling_temp->getNewVal());
+        if(AC_Fan_state == 0) //if auto
         {
-          ac.setFan(kHitachiAc1FanHigh);
-          fan_speed_for_display = 3;
+          ac.setFan(kHitachiAc1FanAuto);
         }
-        else if(fan_speed->getNewVal() < 80 && fan_speed->getNewVal() > 40)
+        else //manual
         {
-          ac.setFan(kHitachiAc1FanMed);
-          fan_speed_for_display = 2;
+          switch(AC_Fan_speed)  //change the fan speed according to set speed from dedicated fan service
+          {
+          case 90:
+            ac.setFan(kHitachiAc1FanHigh);
+            fan_speed_for_display = 3;
+            break;
+          case 60:
+            ac.setFan(kHitachiAc1FanMed);
+            fan_speed_for_display = 2;
+            break;
+          case 30:
+            ac.setFan(kHitachiAc1FanLow);
+            fan_speed_for_display = 1;
+            break; 
+          default:
+            ac.setFan(kHitachiAc1FanAuto);
+            fan_speed_for_display = 0;
+            break;
+          }
         }
-        else
-        {
-          ac.setFan(kHitachiAc1FanLow);
-          fan_speed_for_display = 1;
-        }
-
-        //setting V Swing
-        if(swing_on_off->getNewVal() ==1)
-        {
-          //swing on
-          ac.setSwingV(true);
-        }
-        else{
-          ac.setSwingV(false);
-        }
-      }
+        break;
       
+      default:
+        break;
+      }
     }
     else{
       ac.off();
+      AC_on_off = 0;
     }
 
     ac.send(); //fire the IR blaster/commit AC control operation
@@ -158,8 +209,15 @@ struct DEV_Smart_AC : Service::HeaterCooler
     // Serial.println("Hitachi A/C remote is in the following state:");
     // Serial.println(set_cooling_temp->getNewVal());
     // Serial.println(active->getNewVal());
-    display_stuff(set_cooling_temp->getNewVal(), active->getNewVal(), mode->getNewVal(), fan_speed_for_display);
+
+    AC_set_temp = set_cooling_temp->getNewVal();
+    AC_mode = mode->getNewVal();
+
+    display_stuff(AC_set_temp, AC_on_off, AC_mode, fan_speed_for_display);
     Serial.printf("  %s\n", ac.toString().c_str());
+
+    AC_prev_mode = mode->getNewVal();
+    // AC_prev_mode = AC_mode;
 
     return(true);                               // return true
   
@@ -225,3 +283,105 @@ struct DEV_Humidity : Service::HumiditySensor {
     // Serial.println(curr_hum->timeVal());
   }
 };
+
+//For AC Fan control
+struct DEV_AC_Fan : Service::Fan
+{
+  SpanCharacteristic *fan_Active;
+  SpanCharacteristic *fan_speed;
+  SpanCharacteristic *fan_mode;
+  SpanCharacteristic *swing_mode;
+
+  DEV_AC_Fan() : Service::Fan()
+  {
+    fan_Active = new Characteristic::Active();
+    // new Characteristic::CurrentFanState(2); // 0-inactive //1-idle //2-blowing air
+    fan_mode = new Characteristic::TargetFanState(); //0-manual //1-auto
+    swing_mode = new Characteristic::SwingMode(0, true); //0-disabled //1-enabled
+    fan_speed = (new Characteristic::RotationSpeed(60, true))->setRange(0,90,30);
+
+    // update();
+  }
+
+  boolean update()
+  {
+    if(AC_mode != 0)  //not Auto
+    {
+      AC_Fan_speed = fan_speed->getNewVal();
+      if(AC_Fan_speed != 0)
+      {
+        fan_mode->setVal(0); //set it to manual
+        Serial.print(" MANUAL forced : ");
+        Serial.println(fan_mode->getNewVal());
+      }
+      if(fan_mode->getNewVal() == 1)
+      {
+        fan_speed->setVal(0);
+        Serial.print(" MANUAL BUTTON pressed : ");
+        Serial.println(fan_speed->getNewVal());
+      }
+      AC_Fan_state  = !(fan_mode->getNewVal()); //reverse logic
+      AC_Swing_mode =  swing_mode->getNewVal();
+      ac.setSwingV(AC_Swing_mode);
+      switch(fan_speed->getNewVal())  //change the fan speed according to set speed from dedicated fan service
+      {
+      case 90:
+        ac.setFan(kHitachiAc1FanHigh);
+        fan_speed_for_display = 3;
+        break;
+      case 60:
+        ac.setFan(kHitachiAc1FanMed);
+        fan_speed_for_display = 2;
+        break;
+      case 30:
+        ac.setFan(kHitachiAc1FanLow);
+        fan_speed_for_display = 1;
+        break;
+      default:
+        ac.setFan(kHitachiAc1FanAuto);
+        fan_speed_for_display = 0;
+        fan_mode->setVal(1); //set mode auto in ui
+        break;
+      }
+    }
+    //when the AC mode is AUTO
+    else
+    {
+      fan_mode->setVal(AC_Fan_state);
+      swing_mode->setVal(AC_Swing_mode);
+      fan_speed->setVal(0);
+      ac.setFan(kHitachiAc1FanAuto);
+    }
+
+    if(fan_speed->getNewVal() == 0)
+    {
+      fan_mode->setVal(1); //set the button to auto
+    }
+
+    if(AC_on_off == 1)
+    {
+      Serial.printf("  %s\n", ac.toString().c_str());
+      display_stuff(AC_set_temp, AC_on_off, AC_mode, fan_speed_for_display);
+      ac.send(); //only fire IR for fan settings when the AC is on
+    }
+    
+    return (true);
+  }
+
+  void loop()
+  {
+    // Serial.println("TEST inside AC Fan function loop");
+    // DEV_Smart_AC ac;
+    // Serial.println(ac.active->getNewVal());
+    // Serial.println(AC_fan_speed->getNewVal());
+
+    if(AC_on_off == 1)
+    {
+      fan_Active->setVal(1); //if the ac is on, turn on the ac fan too (only for Home app ui fn)
+    }
+    else{
+      fan_Active->setVal(0); // when the AC is off turn the ac fann too
+    }
+  }
+};
+

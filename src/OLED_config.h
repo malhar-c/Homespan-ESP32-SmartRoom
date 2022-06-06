@@ -118,8 +118,8 @@ void AC_mode_display(int mode) //0-auto 1-heat/fan 2-cool
 
 void AC_fan_settings_display(int speed)
 {
-    Serial.print("Fan Mode Value: ");
-    Serial.println(speed);
+    // Serial.print("Fan Mode OLED Value: ");
+    // Serial.println(speed);
     switch(speed) //0-auto 1-low 2-med 3-high
     {
         case 0: 
