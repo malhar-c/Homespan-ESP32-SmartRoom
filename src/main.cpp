@@ -131,17 +131,43 @@ void setup() {
       new Characteristic::Name("Ceiling Fan");  
     new DEV_Ceiling_Fan;
 
-  new SpanAccessory();                            
-    new Service::AccessoryInformation();    
-      new Characteristic::Identify();               
-      new Characteristic::Name("Air Conditioner");  
-    new DEV_Smart_AC;
+  // new SpanAccessory();                            
+  //   new Service::AccessoryInformation();    
+  //     new Characteristic::Identify();               
+  //     new Characteristic::Name("Air Conditioner");  
+  //   new DEV_Smart_AC;
 
-  new SpanAccessory();                            
-    new Service::AccessoryInformation();    
-      new Characteristic::Identify();               
-      new Characteristic::Name("Humidity Sensor");  
+  // new SpanAccessory();                            
+  //   new Service::AccessoryInformation();    
+  //     new Characteristic::Identify();               
+  //     new Characteristic::Name("Humidity Sensor");  
+  //   new DEV_Humidity;
+
+  // new SpanAccessory();
+  //   new Service::AccessoryInformation();
+  //     new Characteristic::Identify();
+  //     new Characteristic::Name("AC_Fan");
+  //   new DEV_AC_Fan;
+
+  //Remaking of AC and climate control (will get advanced options and control authority)
+  new SpanAccessory();
+    new Service::AccessoryInformation();
+      new Characteristic::Identify();
+    // new Service::HeaterCooler();
+      // new Characteristic::Active();
+      // new Characteristic::CurrentTemperature();
+      // new Characteristic::CurrentHeaterCoolerState();
+      // new Characteristic::TargetHeaterCoolerState();
+      // new Characteristic::Name("Air Conditioner");
+    new DEV_Smart_AC; 
+    // new Service::HumiditySensor();
+      // new Characteristic::CurrentRelativeHumidity();
+      // new Characteristic::Name("Humidity Sensor");
     new DEV_Humidity;
+    // new Service::Fan();
+      // new Characteristic::Active();
+      // new Characteristic::Name("AC_Fan");
+    new DEV_AC_Fan;
 
 } // end of setup()
 
