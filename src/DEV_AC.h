@@ -203,9 +203,11 @@ struct DEV_Smart_AC : Service::HeaterCooler
     else{
       ac.off();
       AC_on_off = 0;
+      ac.send();
+      display_stuff(AC_set_temp, AC_on_off, AC_mode, fan_speed_for_display);
     }
 
-    ac.send(); //fire the IR blaster/commit AC control operation
+    // ac.send(); //fire the IR blaster/commit AC control operation
     // delay(500);
 
     //for debugging
@@ -216,8 +218,8 @@ struct DEV_Smart_AC : Service::HeaterCooler
     AC_set_temp = set_cooling_temp->getNewVal();
     AC_mode = mode->getNewVal();
 
-    display_stuff(AC_set_temp, AC_on_off, AC_mode, fan_speed_for_display);
-    Serial.printf("  %s\n", ac.toString().c_str());
+    // display_stuff(AC_set_temp, AC_on_off, AC_mode, fan_speed_for_display);
+    // Serial.printf("  %s\n", ac.toString().c_str());
 
     AC_prev_mode = mode->getNewVal();
     // AC_prev_mode = AC_mode;
