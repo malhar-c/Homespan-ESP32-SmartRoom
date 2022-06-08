@@ -44,6 +44,8 @@ short AC_prev_mode = 0;
 bool AC_on_off = 0;
 short AC_set_temp;
 
+bool AC_fan_updation = false;
+
 struct DEV_Smart_AC : Service::HeaterCooler 
 {
   SpanCharacteristic *active;
@@ -75,6 +77,7 @@ struct DEV_Smart_AC : Service::HeaterCooler
     // digitalWrite(relayPin,power->getNewVal());     
     // Serial.println(mode->getNewVal());
 
+    AC_fan_updation = true; //to also run the dedicated fan update function
     AC_mode = mode->getNewVal();
 
     //detect auto mode switch
@@ -358,13 +361,17 @@ struct DEV_AC_Fan : Service::Fan
       fan_mode->setVal(1); //set the button to auto
     }
 
+    Serial.print("AC_on_off = ");
+    Serial.println(AC_on_off);
+
     if(AC_on_off == 1)
     {
+      // fan_Active->setVal(1); //if the ac is on, turn on the ac fan too (only for Home app ui fn)
       Serial.printf("  %s\n", ac.toString().c_str());
       display_stuff(AC_set_temp, AC_on_off, AC_mode, fan_speed_for_display);
       ac.send(); //only fire IR for fan settings when the AC is on
-    }
-    
+    }   
+
     return (true);
   }
 
@@ -375,13 +382,19 @@ struct DEV_AC_Fan : Service::Fan
     // Serial.println(ac.active->getNewVal());
     // Serial.println(AC_fan_speed->getNewVal());
 
+    if(AC_fan_updation == true)
+    {
+      update();
+      AC_fan_updation = false;
+    }
+
     if(AC_on_off == 1)
     {
       fan_Active->setVal(1); //if the ac is on, turn on the ac fan too (only for Home app ui fn)
-    }
+    } 
     else{
       fan_Active->setVal(0); // when the AC is off turn the ac fann too
-    }
+    } 
   }
 };
 
