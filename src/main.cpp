@@ -89,6 +89,7 @@ void setup() {
   // time init (get time from ntp server) // written in time_management.h
   time_init();
 
+  homeSpan.enableOTA(); //void enableOTA(boolean auth=true, boolean safeLoad=true)
   homeSpan.begin(Category::Bridges,"Smart Room");
   
   new SpanAccessory();                            // This first Accessory is the new "Bridge" Accessory.  It contains no functional Services, just the Accessory Information Service
