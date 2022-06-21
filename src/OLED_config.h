@@ -27,6 +27,9 @@ void display_time_large();
 void AC_mode_display(int);
 void AC_fan_settings_display(int);
 
+//vairables
+// short time_fetch_timeout_counter = 0;
+
 void OLED_init()
 {
     display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);
@@ -140,8 +143,9 @@ void AC_fan_settings_display(int speed)
 void display_time_large()
 {
     display.clearDisplay();
-    if(update_time_hh_mm())
+    if(update_time_hh_mm() == 1)
     {
+        // time_fetch_timeout_counter = 0;
         display.setTextSize(2);             // Normal 1:1 pixel scale
         display.setTextColor(SSD1306_WHITE);        // Draw white text
         display.setCursor(0,10);             
@@ -149,7 +153,7 @@ void display_time_large()
         display.print(hours);
         display.print(F(":"));
         display.print(minutes);
-        display.display();
+        // display.display();
 
         // display.drawBitmap(100, 0, cool_bmp, cool_width, cool_height, 1);
         // // display.drawBitmap(89, 20, fan_auto_bmp, fan_auto_width, fan_auto_height, 1);
@@ -162,4 +166,53 @@ void display_time_large()
         // Serial.println(minutes);
         // printLocalTime(); //for debugging
     }
+    else if (update_time_hh_mm() == 2){
+        // ++time_fetch_timeout_counter;
+        display.setTextSize(1);             // Normal 1:1 pixel scale
+        display.setTextColor(SSD1306_WHITE);        // Draw white text
+        display.setCursor(0,14);             
+        // display.print(F("OFF"));
+        // display.print(hours);
+        display.print(F("Fetching Time"));
+        switch(get_time_try)
+        {
+            case 1:
+                display.print(F("."));
+                break;
+            case 2:
+                display.print(F(".."));
+                break;
+            case 3:
+                display.print(F("..."));
+                break;
+            case 4:
+                display.print(F("...."));
+                break;
+            case 5:
+                display.print(F("....."));
+                break;
+            case 6:
+                display.print(F("......"));
+                break;
+            case 7:
+                display.print(F("......."));
+                break;
+            case 8:
+                display.print(F("........"));
+                break;
+            case 9:
+                display.print(F("........."));
+                break;
+        }
+    }
+    else{
+        display.setTextSize(1);             // Normal 1:1 pixel scale
+        display.setTextColor(SSD1306_WHITE);        // Draw white text
+        display.setCursor(0,14);             
+        // display.print(F("OFF"));
+        // display.print(hours);
+        display.print(F("Failed to connect to NTP server"));
+        // display.print(minutes);
+    }
+    display.display();
 }
