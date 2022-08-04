@@ -16,6 +16,9 @@ short hours = 0;
 short minutes = 0;
 
 short get_time_try = 0;  //timeout variable
+bool time_failed = 0;
+
+#define time_retry_count 9
 
 void time_init()
 {
@@ -45,12 +48,18 @@ short update_time_hh_mm()
   // Serial.print(":");
   // Serial.println(minutes);
 
+  if(time_failed == 1)
+  {
+    return 0; //return 0 until time_failed gets resetted by rebooting the ESP
+  }
+
   struct tm timeinfo;
-  if(get_time_try < 9 && !getLocalTime(&timeinfo))
+  if(get_time_try < time_retry_count && !getLocalTime(&timeinfo))
   {
     ++get_time_try;
-    if(get_time_try >= 9)
+    if(get_time_try >= time_retry_count)
     {
+      time_failed = 1;
       return 0;
     }
     return 2;
