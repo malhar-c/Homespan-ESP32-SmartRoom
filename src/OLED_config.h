@@ -200,8 +200,8 @@ void display_time_large()
             case 8:
                 display.print(F("........"));
                 break;
-            case 9:
-                display.print(F("........."));
+            default:
+                display.print(F("\n Still trying!...."));
                 break;
         }
     }

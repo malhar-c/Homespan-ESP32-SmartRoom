@@ -18,7 +18,7 @@ short minutes = 0;
 short get_time_try = 0;  //timeout variable
 bool time_failed = 0;
 
-#define time_retry_count 9
+#define time_retry_count 15
 
 void time_init()
 {
