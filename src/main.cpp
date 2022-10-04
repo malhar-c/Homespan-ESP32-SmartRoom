@@ -39,6 +39,12 @@
 #include "DEV_Fan_Regulator.h"
 #include "DEV_AC.h"
 
+#define Relay_1 15
+#define Relay_2 2
+#define Relay_3 5
+#define Relay_4 27
+#define Relay_5 26
+
 void setup() {
 
   // If the only Service defined in the FIRST Accessory of a mult-Accessory device is the required Accessory Information Service,
@@ -71,7 +77,7 @@ void setup() {
   // pinMode(32, OUTPUT);
 
   //defining pinMode pulls the pins to low for a brief period of time, and that's enough for the relays to tick,
-  //thus disabling pinMode, and directly assigning the pins to HIGH
+  //thus disabling pinMode, and directly assigning the pins to HIGH (perfect solution? IDK... but it works :)
 
   digitalWrite(15, HIGH);
   digitalWrite(2, HIGH);
@@ -81,6 +87,8 @@ void setup() {
   digitalWrite(25, HIGH);
   digitalWrite(33, HIGH);
   digitalWrite(32, HIGH);
+
+  pinMode(man_sw_1, INPUT_PULLUP);
 
   Serial.begin(115200);
 
