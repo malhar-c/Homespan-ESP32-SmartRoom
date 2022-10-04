@@ -33,37 +33,12 @@ struct DEV_Light_pair_1 : Service::LightBulb {               // ON/OFF LED
 
   void loop()
   {
-    //logic for external switch on/off
-    //only trigger when there is a change in state of the switch
-
-    // current_state = digitalRead(man_sw_1);
-
-    // if(digitalRead(man_sw_1) == previous_state) //if switch is on
-    // {
-    //   state_change = 0;
-    // }
-    // else{
-    //   state_change = 1;
-    // }
-
-    // previous_state = digitalRead(man_sw_1);
-    
+    // Logic for manual switch operation
+    // Checking for manual switch state change and whether the device is rebooted
     if(Switch_pressed(man_sw_1) && !reboot)
     {
-      // Serial.println("MANUAL SWITCH ON DETECTED");
       delay(50); //debouce delay
-      // Serial.println(digitalRead(man_sw_1));
-
-      if(digitalRead(man_sw_1) == 0){
-        //Manual Switch On
-        Serial.println("manual switch On !!");
-        power->setVal(1); //updating in the home app ui
-      }
-      else{
-        //Manual switch Off
-        Serial.println("Manual Switch Off !!");
-        power->setVal(0); //updating in the home app ui
-      }
+      power->setVal(invert_state(digitalRead(man_sw_1))); //updating in the home app ui
       update(); //call the update function to make the relay go brrrrrr
     }
     reboot = 0;
