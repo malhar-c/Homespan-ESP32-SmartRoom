@@ -15,38 +15,63 @@ unsigned short current_time_s =  millis();
 short hours = 0;
 short minutes = 0;
 
+short get_time_try = 0;  //timeout variable
+bool time_failed = 0;
+
+#define time_retry_count 15
+
 void time_init()
 {
     configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 }
 
 //test time print funtion
-void printLocalTime()
-{
-  struct tm timeinfo;
-  if(!getLocalTime(&timeinfo)){
-    Serial.println("Failed to obtain time");
-    return;
-  }
-  // getLocalTime(&timeinfo);
-  Serial.print ("TEST ---- ");
-  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
-}
+// void printLocalTime()
+// {
+//   struct tm timeinfo;
+//   if(!getLocalTime(&timeinfo)){
+//     Serial.println("Failed to obtain time");
+//     return;
+//   }
+//   // getLocalTime(&timeinfo);
+//   Serial.print ("TEST ---- ");
+//   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+// }
 
-bool update_time_hh_mm()
+short update_time_hh_mm()
 {
-  struct tm timeinfo;
-  if(!getLocalTime(&timeinfo)){
-    return 0;
-  }
-  hours = timeinfo.tm_hour;
-  minutes = timeinfo.tm_min;
   //for debugging
   // Serial.print ("Stored values ---- ");
+  // Serial.print(get_time_try);
+  // Serial.print (" ---- ");
   // Serial.print(hours);
   // Serial.print(":");
   // Serial.println(minutes);
-  return 1;
+
+  if(time_failed == 1)
+  {
+    return 0; //return 0 until time_failed gets resetted by rebooting the ESP
+  }
+
+  struct tm timeinfo;
+  if(get_time_try < time_retry_count && !getLocalTime(&timeinfo))
+  {
+    ++get_time_try;
+    if(get_time_try >= time_retry_count)
+    {
+      time_failed = 1;
+      return 0;
+    }
+    return 2;
+  }
+  
+  else{
+    //assignment
+    hours = timeinfo.tm_hour;
+    minutes = timeinfo.tm_min;
+    get_time_try = 0; //timeout variable reset
+    return 1;
+  }
 }
 
 //This function will return true once every minute
@@ -56,18 +81,19 @@ bool update_time_hh_mm()
 //i.e. 49 ish days, even after the overflow it can be used for precise timming after complete reset
 //for another 49ish days
 //NOTE: overflow will not break anything
-bool a_minute_passed()
-{
-  current_time = millis();
-  if(current_time - previous_time >= 60000 || current_time == 0)
-  {
-    previous_time = current_time;
-    return true;
-  }
-  else{
-    return false;
-  }
-}
+//***DEPECRATED***
+// bool a_minute_passed()
+// {
+//   current_time = millis();
+//   if(current_time - previous_time >= 60000 || current_time == 0)
+//   {
+//     previous_time = current_time;
+//     return true;
+//   }
+//   else{
+//     return false;
+//   }
+// }
 
 //This function will return true once every 2 seconds
 //Those method needs to be called/updated once in two second can utilize this

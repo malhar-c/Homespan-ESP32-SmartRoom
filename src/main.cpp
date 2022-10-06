@@ -24,63 +24,42 @@
  *  SOFTWARE.
  *  
  ********************************************************************************/
- 
-////////////////////////////////////////////////////////////
-//                                                        //
-//    HomeSpan: A HomeKit implementation for the ESP32    //
-//    ------------------------------------------------    //
-//                                                        //
-// Example 8: HomeKit Bridges and Bridge Accessories      //
-//                                                        //
-////////////////////////////////////////////////////////////
+
+
 
 #include "HomeSpan.h" 
 #include "DEV_Switches.h"
 #include "DEV_Fan_Regulator.h"
 #include "DEV_AC.h"
 
+#define Relay_1 15
+#define Relay_2 2
+#define Relay_3 5
+#define Relay_4 27
+#define Relay_5 26
+
 void setup() {
 
-  // If the only Service defined in the FIRST Accessory of a mult-Accessory device is the required Accessory Information Service,
-  // the device is said to be configured as a "Bridge".  Historically there may have been a number of functional differences between bridge
-  // devices and non-bridge devices, but since iOS 15, it's not obvious there are any differences in functionality, with two exceptions:
-  
-  //  1. Recall from Example 7 that the use of Characteristic::Name() to change the default name of an Accessory Tile
-  //     does not work for the first Accessory defined.  The Home App always displays the default name of the first Accessory Tile
-  //     as the name of the device specified in homeSpan.begin().  However, this is not an issue when implementing a device
-  //     as a Bridge, since the first Accessory is nothing but the Bridge itself - having the default name match the name
-  //     of the device in this case makes much more sense.  More importantly, you can now use Characteristic::Name() to change the 
-  //     default name of BOTH the LED Accessory Tiles.
-
-  //  2. Devices configured as a Bridge appear in the Home App under the main settings page that displays all Hubs and Bridges.
-
-  // The sketch below is functionally identical to Example 7, except that instead of defining two Accessories (one for the Simple On/Off
-  // LED and one for the Dimmable LED), we define three Accessories, where the first acts as the Bridge.
-  
-  // As usual, all previous comments have been deleted and only new changes from the previous example are shown.
-
-  // NOTE: To see how this works in practice, you'll need to unpair your device and re-pair it once the new code is loaded.
-  
-  // pinMode(15, OUTPUT);
-  // pinMode(2, OUTPUT);
-  // pinMode(5, OUTPUT);
-  // pinMode(27, OUTPUT);
-  // pinMode(26, OUTPUT);
-  // pinMode(25, OUTPUT);
-  // pinMode(33, OUTPUT);
-  // pinMode(32, OUTPUT);
-
   //defining pinMode pulls the pins to low for a brief period of time, and that's enough for the relays to tick,
-  //thus disabling pinMode, and directly assigning the pins to HIGH
+  //thus disabling pinMode, and directly assigning the pins to HIGH (perfect solution? IDK... but it works :)
 
-  digitalWrite(15, HIGH);
-  digitalWrite(2, HIGH);
-  digitalWrite(5, HIGH);
-  digitalWrite(27, HIGH);
-  digitalWrite(26, HIGH);
-  digitalWrite(25, HIGH);
-  digitalWrite(33, HIGH);
-  digitalWrite(32, HIGH);
+  digitalWrite(Relay_1, HIGH);
+  digitalWrite(Relay_2, HIGH);
+  digitalWrite(Relay_3, HIGH);
+  digitalWrite(Relay_4, HIGH);
+  digitalWrite(Relay_5, HIGH);
+  /*
+  * RC Fan regulator relay config
+  * Speed position 1 -> rc path 1
+  * Speed position 2 -> rc path 2
+  * Speed position 3 -> rc path 1 and 2 in parralel
+  * Speed position 4 -> rc ckt bypass (Full Speed)
+  */
+  digitalWrite(25, HIGH); //fan regulator speed1 (rc path 1)
+  digitalWrite(33, HIGH); //fan regulator speed2 (rc path 2)
+  digitalWrite(32, HIGH); //fan regulator speed3 (rc path bypass)
+
+  pinMode(man_sw_1, INPUT_PULLUP);
 
   Serial.begin(115200);
 
@@ -88,8 +67,10 @@ void setup() {
   setup_init();
   // time init (get time from ntp server) // written in time_management.h
   time_init();
+  //pin_extender pcf8574 initiation
+  setup_pin_extender();
 
-  homeSpan.enableOTA(); //void enableOTA(boolean auth=true, boolean safeLoad=true)
+  // homeSpan.enableOTA(); //void enableOTA(boolean auth=true, boolean safeLoad=true)
   homeSpan.begin(Category::Bridges,"Smart Room");
   
   new SpanAccessory();                            // This first Accessory is the new "Bridge" Accessory.  It contains no functional Services, just the Accessory Information Service
@@ -100,31 +81,31 @@ void setup() {
     new Service::AccessoryInformation();
       new Characteristic::Identify();            
       new Characteristic::Name("Ceiling P1");     // Note that unlike in Example 7, this use of Name() is now utilized by the Home App since it is not the first Accessory (the Bridge above is the first)
-    new DEV_Light_pair_1(15);
+    new DEV_Light_pair_1(Relay_1);
 
   new SpanAccessory();                            
     new Service::AccessoryInformation();    
       new Characteristic::Identify();               
       new Characteristic::Name("Ceiling P2");  
-    new DEV_Light_pair_2(2);
+    new DEV_Light_pair_2(Relay_2);
   
   new SpanAccessory();                            
     new Service::AccessoryInformation();    
       new Characteristic::Identify();               
       new Characteristic::Name("Tube Light");  
-    new DEV_Tube_Light(5);
+    new DEV_Tube_Light(Relay_3);
 
   new SpanAccessory();                            
     new Service::AccessoryInformation();    
       new Characteristic::Identify();               
       new Characteristic::Name("Night Lamp");  
-    new DEV_Night_Light(27);
+    new DEV_Night_Light(Relay_4);
 
   new SpanAccessory();                            
     new Service::AccessoryInformation();    
       new Characteristic::Identify();               
       new Characteristic::Name("Main Power Socket");  
-    new DEV_Socket(26);
+    new DEV_Socket(Relay_5);
 
   new SpanAccessory();                            
     new Service::AccessoryInformation();    

@@ -1,5 +1,21 @@
-// prototype
+#include <PCF8574.h>
+PCF8574 pin_ext_1(0x20);
+
+#define man_sw_1 18
+
+bool previous_state;
+bool state_change;
+bool reboot = 1;  //This variable is to detect if the ESP has restarted or not.
+
+void setup_pin_extender()
+{
+  pin_ext_1.pinMode(P0, OUTPUT);
+  pin_ext_1.begin();
+}
+
+// prototypes
 int invert_state(int);
+bool Switch_pressed(short);
 
 struct DEV_Light_pair_1 : Service::LightBulb {               // ON/OFF LED
 
@@ -23,6 +39,23 @@ struct DEV_Light_pair_1 : Service::LightBulb {               // ON/OFF LED
     return(true);                               // return true
   
   } // update
+
+  void loop()
+  {
+    // Logic for manual switch operation
+    // Checking for manual switch state change and whether the device is rebooted
+    if(Switch_pressed(man_sw_1) && !reboot)
+    {
+      delay(50); //debouce delay
+      power->setVal(invert_state(digitalRead(man_sw_1))); //updating in the home app ui
+      update(); //call the update function to make the relay go brrrrrr
+
+      //test pin extender
+      pin_ext_1.digitalWrite(P0, invert_state(digitalRead(man_sw_1)));
+      //test end for pin extender
+    }
+    reboot = 0;
+  }
 };
 
 //Light pair 2 relay control
@@ -133,4 +166,16 @@ struct DEV_Socket : Service::Switch {               // ON/OFF LED
 int invert_state(int in_state)
 {
   return(!in_state);
+}
+
+bool Switch_pressed(short man_switch)
+{
+  if(digitalRead(man_switch) == previous_state){
+    state_change = 0;
+  }
+  else{
+    state_change = 1;
+  }
+  previous_state = digitalRead(man_switch);
+  return state_change;
 }
