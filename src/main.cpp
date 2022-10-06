@@ -67,6 +67,8 @@ void setup() {
   setup_init();
   // time init (get time from ntp server) // written in time_management.h
   time_init();
+  //pin_extender pcf8574 initiation
+  setup_pin_extender();
 
   // homeSpan.enableOTA(); //void enableOTA(boolean auth=true, boolean safeLoad=true)
   homeSpan.begin(Category::Bridges,"Smart Room");

@@ -1,8 +1,17 @@
+#include <PCF8574.h>
+PCF8574 pin_ext_1(0x20);
+
 #define man_sw_1 18
 
 bool previous_state;
 bool state_change;
 bool reboot = 1;  //This variable is to detect if the ESP has restarted or not.
+
+void setup_pin_extender()
+{
+  pin_ext_1.pinMode(P0, OUTPUT);
+  pin_ext_1.begin();
+}
 
 // prototypes
 int invert_state(int);
@@ -40,6 +49,10 @@ struct DEV_Light_pair_1 : Service::LightBulb {               // ON/OFF LED
       delay(50); //debouce delay
       power->setVal(invert_state(digitalRead(man_sw_1))); //updating in the home app ui
       update(); //call the update function to make the relay go brrrrrr
+
+      //test pin extender
+      pin_ext_1.digitalWrite(P0, invert_state(digitalRead(man_sw_1)));
+      //test end for pin extender
     }
     reboot = 0;
   }
