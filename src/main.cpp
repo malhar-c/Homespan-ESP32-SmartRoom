@@ -37,6 +37,9 @@
 #define Relay_3 5
 #define Relay_4 27
 #define Relay_5 26
+#define Relay_6 25
+#define Relay_7 33
+#define Relay_8 32
 
 void setup() {
 
@@ -55,9 +58,9 @@ void setup() {
   * Speed position 3 -> rc path 1 and 2 in parralel
   * Speed position 4 -> rc ckt bypass (Full Speed)
   */
-  digitalWrite(25, HIGH); //fan regulator speed1 (rc path 1)
-  digitalWrite(33, HIGH); //fan regulator speed2 (rc path 2)
-  digitalWrite(32, HIGH); //fan regulator speed3 (rc path bypass)
+  digitalWrite(Relay_6, HIGH); //fan regulator speed1 (rc path 1)
+  digitalWrite(Relay_7, HIGH); //fan regulator speed2 (rc path 2)
+  digitalWrite(Relay_8, HIGH); //fan regulator speed3 (rc path bypass)
 
   pinMode(man_sw_1, INPUT_PULLUP);
 
