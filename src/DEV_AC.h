@@ -17,7 +17,7 @@ IRHitachiAc1 ac(kIrLed);
 //OLED config
 #include "OLED_config.h"
 
-//not sure if this is optional
+//this is required to be called in main.cpp setup()
 void setup_init()
 {
   dht.begin();
