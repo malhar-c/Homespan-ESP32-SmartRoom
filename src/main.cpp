@@ -29,28 +29,40 @@
 
 #include "HomeSpan.h" 
 #include "DEV_Switches.h"
-#include "DEV_Fan_Regulator.h"
+// #include "DEV_Fan_Regulator.h"
 #include "DEV_AC.h"
 
-#define Relay_1 15
-#define Relay_2 2
-#define Relay_3 5
-#define Relay_4 27
-#define Relay_5 26
-#define Relay_6 25
-#define Relay_7 33
-#define Relay_8 32
+// #define Relay_1 15
+// #define Relay_2 26
+// #define Relay_3 5
+// #define Relay_4 27
+// #define Relay_5 26
+// #define Relay_6 25
+// #define Relay_7 33
+// #define Relay_8 32
 
 void setup() {
 
   //defining pinMode pulls the pins to low for a brief period of time, and that's enough for the relays to tick,
   //thus disabling pinMode, and directly assigning the pins to HIGH (perfect solution? IDK... but it works :)
 
-  digitalWrite(Relay_1, HIGH);
-  digitalWrite(Relay_2, HIGH);
-  digitalWrite(Relay_3, HIGH);
-  digitalWrite(Relay_4, HIGH);
-  digitalWrite(Relay_5, HIGH);
+  // pin_ext_1.pinMode(P0, OUTPUT);
+  // pin_ext_1.pinMode(P1, OUTPUT);
+  // pin_ext_1.pinMode(P2, OUTPUT);
+  // pin_ext_1.pinMode(P3, OUTPUT);
+  // pin_ext_1.pinMode(P4, OUTPUT);
+  // pin_ext_1.pinMode(P5, OUTPUT);
+  // pin_ext_1.pinMode(P6, OUTPUT);
+  // pin_ext_1.pinMode(P7, OUTPUT);
+  // pin_ext_1.begin();
+
+  // pin_ext_1.digitalWrite(P0, HIGH);
+
+  // digitalWrite(Relay_1, HIGH);
+  // digitalWrite(Relay_2, HIGH);
+  // digitalWrite(Relay_3, HIGH);
+  // digitalWrite(Relay_4, HIGH);
+  // digitalWrite(Relay_5, HIGH);
   /*
   * RC Fan regulator relay config
   * Speed position 1 -> rc path 1
@@ -58,9 +70,9 @@ void setup() {
   * Speed position 3 -> rc path 1 and 2 in parralel
   * Speed position 4 -> rc ckt bypass (Full Speed)
   */
-  digitalWrite(Relay_6, HIGH); //fan regulator speed1 (rc path 1)
-  digitalWrite(Relay_7, HIGH); //fan regulator speed2 (rc path 2)
-  digitalWrite(Relay_8, HIGH); //fan regulator speed3 (rc path bypass)
+  // digitalWrite(Relay_6, HIGH); //fan regulator speed1 (rc path 1)
+  // digitalWrite(Relay_7, HIGH); //fan regulator speed2 (rc path 2)
+  // digitalWrite(Relay_8, HIGH); //fan regulator speed3 (rc path bypass)
 
   pinMode(man_sw_1, INPUT_PULLUP);
 
@@ -73,6 +85,8 @@ void setup() {
   //pin_extender pcf8574 initiation
   setup_pin_extender();
 
+  homeSpan.setStatusPin(2);
+
   // homeSpan.enableOTA(); //void enableOTA(boolean auth=true, boolean safeLoad=true)
   homeSpan.begin(Category::Bridges,"Smart Room");
   
@@ -84,31 +98,25 @@ void setup() {
     new Service::AccessoryInformation();
       new Characteristic::Identify();            
       new Characteristic::Name("Ceiling P1");     // Note that unlike in Example 7, this use of Name() is now utilized by the Home App since it is not the first Accessory (the Bridge above is the first)
-    new DEV_Light_pair_1(Relay_1);
+    new DEV_Light_pair_1;
 
   new SpanAccessory();                            
     new Service::AccessoryInformation();    
       new Characteristic::Identify();               
       new Characteristic::Name("Ceiling P2");  
-    new DEV_Light_pair_2(Relay_2);
+    new DEV_Light_pair_2;
   
   new SpanAccessory();                            
     new Service::AccessoryInformation();    
       new Characteristic::Identify();               
       new Characteristic::Name("Tube Light");  
-    new DEV_Tube_Light(Relay_3);
+    new DEV_Tube_Light;
 
   new SpanAccessory();                            
     new Service::AccessoryInformation();    
       new Characteristic::Identify();               
       new Characteristic::Name("Night Lamp");  
-    new DEV_Night_Light(Relay_4);
-
-  new SpanAccessory();                            
-    new Service::AccessoryInformation();    
-      new Characteristic::Identify();               
-      new Characteristic::Name("Main Power Socket");  
-    new DEV_Socket(Relay_5);
+    new DEV_Night_Light;
 
   new SpanAccessory();                            
     new Service::AccessoryInformation();    

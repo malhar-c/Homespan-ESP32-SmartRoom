@@ -238,7 +238,14 @@ struct DEV_Smart_AC : Service::HeaterCooler
         display_time_large();
       }
       // display_stuff(set_cooling_temp->getNewVal(), active->getNewVal()); // for time display (update every 1s)
-      curr_temp->setVal(dht.readTemperature());
+      if(dht.readTemperature() > 0 && dht.readTemperature() < 50) //checking if the temp value is not bugged
+      {
+        curr_temp->setVal(dht.readTemperature());
+      }
+      else{
+        curr_temp->setVal(0);
+      }
+      //debug
       // Serial.print("temp: ");
       // Serial.println(dht.readTemperature());
     }
@@ -277,7 +284,14 @@ struct DEV_Humidity : Service::HumiditySensor {
     
     if(curr_hum->timeVal() > 2000)  //if the humidity is last updated more than 2s Update it
     {
-      curr_hum->setVal(dht.readHumidity());
+      //check if humidty value is valid
+      if(dht.readHumidity() > 0 && dht.readHumidity() < 100){
+        curr_hum->setVal(dht.readHumidity());
+      }
+      else{
+        curr_hum->setVal(0);
+      }
+      //debugging
       // Serial.print("hum: ");
       // Serial.println(curr_hum->getNewVal());
       // Serial.println(dht.readHumidity());
