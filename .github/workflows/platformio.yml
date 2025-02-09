@@ -3,8 +3,6 @@ name: PlatformIO CI
 on:
   push:
     branches: ["master"]
-  pull_request:
-    branches: ["master"]
 
 jobs:
   build:
@@ -42,20 +40,6 @@ jobs:
       - name: Build
         run: pio run
 
-      - name: Check OTA Size
-        run: |
-          MAX_OTA_SIZE=1310720  # 1.25MB in bytes for ESP32's OTA partition
-          BINARY_SIZE=$(stat -f %z .pio/build/esp32doit-devkit-v1/firmware.bin || stat -c %s .pio/build/esp32doit-devkit-v1/firmware.bin)
-          echo "Binary size: $BINARY_SIZE bytes"
-          echo "Maximum OTA size: $MAX_OTA_SIZE bytes"
-          if [ "$BINARY_SIZE" -gt "$MAX_OTA_SIZE" ]; then
-            echo "OTA_STATUS=exceeded" >> $GITHUB_ENV
-            echo "Binary size ($BINARY_SIZE bytes) exceeds OTA limit ($MAX_OTA_SIZE bytes)"
-          else
-            PERCENT_USED=$((BINARY_SIZE * 100 / MAX_OTA_SIZE))
-            echo "OTA_STATUS=ready ($PERCENT_USED% used)" >> $GITHUB_ENV
-          fi
-
       - name: Add Build Status Badge
         uses: schneegans/dynamic-badges-action@v1.6.0
         with:
@@ -66,7 +50,23 @@ jobs:
           message: ${{ job.status }}
           color: ${{ job.status == 'success' && 'success' || 'critical' }}
 
+      - name: Check OTA Size
+        run: |
+          MAX_OTA_SIZE=1310720  # 1.25MB in bytes for ESP32's OTA partition
+          BINARY_SIZE=$(stat -f %z .pio/build/esp32doit-devkit-v1/firmware.bin || stat -c %s .pio/build/esp32doit-devkit-v1/firmware.bin)
+          echo "Binary size: $BINARY_SIZE bytes"
+          echo "Maximum OTA size: $MAX_OTA_SIZE bytes"
+          if [ "$BINARY_SIZE" -gt "$MAX_OTA_SIZE" ]; then
+            echo "OTA_STATUS=exceeded" >> $GITHUB_ENV
+            echo "Binary size ($BINARY_SIZE bytes) exceeds OTA limit ($MAX_OTA_SIZE bytes)"
+            exit 1
+          else
+            PERCENT_USED=$((BINARY_SIZE * 100 / MAX_OTA_SIZE))
+            echo "OTA_STATUS=ready ($PERCENT_USED% used)" >> $GITHUB_ENV
+          fi
+
       - name: Add OTA Status Badge
+        if: always()
         uses: schneegans/dynamic-badges-action@v1.6.0
         with:
           auth: ${{ secrets.GIST_SECRET }}
