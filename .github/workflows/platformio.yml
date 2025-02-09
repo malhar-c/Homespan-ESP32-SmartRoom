@@ -64,10 +64,12 @@ jobs:
           echo "Maximum OTA size: $MAX_OTA_SIZE bytes"
           if [ "$BINARY_SIZE" -gt "$MAX_OTA_SIZE" ]; then
             echo "OTA_STATUS=exceeded ($BINARY_SIZE bytes)" >> $GITHUB_ENV
+            echo "check_failed=true" >> $GITHUB_ENV
             exit 1
           else
             PERCENT_USED=$((BINARY_SIZE * 100 / MAX_OTA_SIZE))
             echo "OTA_STATUS=ready ($PERCENT_USED% used)" >> $GITHUB_ENV
+            echo "check_failed=false" >> $GITHUB_ENV
           fi
 
       - name: Add OTA Status Badge
@@ -79,6 +81,11 @@ jobs:
           gistID: 46292c13ab8c70e68aa9619cad1d9560
           filename: esp32-homekit-ota.json
           label: "OTA Status"
-          message: ${{ env.OTA_STATUS || 'check failed' }}
-          color: ${{ contains(env.OTA_STATUS, 'exceeded') && 'critical' || (env.OTA_STATUS != '' && 'success' || 'yellow') }}
+          message: ${{ env.OTA_STATUS || 'Failed to check size' }}
+          color: >-
+            ${{ 
+              env.check_failed == 'true' && 'critical' ||
+              env.OTA_STATUS != '' && 'success' ||
+              'critical'
+            }}
           namedLogo: github-actions
