@@ -2,6 +2,7 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include "Fonts_OLED_Display/Org_01.h"
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -23,12 +24,15 @@ Adafruit_SSD1306 display (SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 //function prototypes
 void splash();
-void display_time_large();
+void display_time_large(bool motion_pir_state, bool relay_state_array);
 void AC_mode_display(int);
 void AC_fan_settings_display(int);
+void motion_detection_status(bool);
+void relays_status(bool);
 
 //vairables
 // short time_fetch_timeout_counter = 0;
+// bool state_switch = 1;
 
 void OLED_init()
 {
@@ -75,27 +79,69 @@ void splash()
     display.display();
 }
 
-void display_stuff(int temp, bool active, int AC_mode, int fan_speed)
+void motion_detection_status(bool on_off){
+    // display.clearDisplay();
+    display.setTextSize(2);
+    display.setTextColor(SSD1306_WHITE);
+    if(on_off){
+        display.setFont(&Org_01);
+        display.setCursor(118, 62);
+        display.println("m");
+        display.setCursor(118, 52);
+        display.println(digitalRead(PIR_motion_sensor));
+    }
+    else{
+        display.setFont(&Org_01);
+        display.setCursor(120, 62);
+        display.println("o");
+        display.setCursor(118, 52);
+        display.println(digitalRead(PIR_motion_sensor));
+    }
+    display.display();
+}
+
+void relays_status(bool relay[5])
+{
+    // update the OLED display as per the relays
+    // display.clearDisplay();
+    display.setTextColor(SSD1306_WHITE);
+    display.setTextSize(1);
+    display.setFont(&Org_01);
+    for(int i=0; i<7; i++)
+    {
+        if(relay[i]){
+            display.setCursor((i*16), 62);
+            display.print("R");
+            display.print(i+1);
+        }
+    }
+    
+    display.display();
+}
+
+void display_stuff(int temp, bool active, int AC_mode, int fan_speed, bool motion, bool relay_state)
 {
   //set and update the OLED display with temp, humidity, etc
   // if the AC is on, display the AC set temp, else display time and the current temp
   if(active)
   {
-      display.clearDisplay();
-      display.setTextSize(4);             // Normal 1:1 pixel scale
-      display.setTextColor(SSD1306_WHITE);        // Draw white text
-      display.setCursor(0,0);             
-      display.print(temp);
-      display.setTextSize(1);
-      display.print(F("o")); //degree symbol       
-      display.setTextSize(2);
-      display.println(F(" C"));
-      AC_mode_display(AC_mode);
-      AC_fan_settings_display(fan_speed);
-      display.display();
+    display.clearDisplay();
+    display.setTextSize(4);             // Normal 1:1 pixel scale
+    display.setTextColor(SSD1306_WHITE);        // Draw white text
+    display.setCursor(0,6);
+    display.setFont(NULL);             
+    display.print(temp);
+    display.setTextSize(1);
+    display.print(F("o")); //degree symbol       
+    display.setTextSize(2);
+    display.println(F(" C"));
+    AC_mode_display(AC_mode);
+    AC_fan_settings_display(fan_speed);
+    display.display();
+    motion_detection_status(motion);
   }
   else{
-      display_time_large();
+    display_time_large(motion, relay_state);
   }
 }
 
@@ -140,15 +186,16 @@ void AC_fan_settings_display(int speed)
     }
 }
 
-void display_time_large()
+void display_time_large(bool motion_pir_state, bool relay_state_array)
 {
     display.clearDisplay();
     if(update_time_hh_mm() == 1)
     {
         // time_fetch_timeout_counter = 0;
-        display.setTextSize(2);             // Normal 1:1 pixel scale
-        display.setTextColor(SSD1306_WHITE);        // Draw white text
-        display.setCursor(0,10);             
+        display.setTextSize(5);
+        display.setTextColor(WHITE);
+        display.setFont(&Org_01);
+        display.setCursor(2,26);             
         // display.print(F("OFF"));
         display.print(hours);
         display.print(F(":"));
@@ -215,4 +262,6 @@ void display_time_large()
         // display.print(minutes);
     }
     display.display();
+    motion_detection_status(motion_pir_state);
+    relays_status(actual_relay_state);
 }

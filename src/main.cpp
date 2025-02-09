@@ -28,7 +28,7 @@
 
 
 #include "HomeSpan.h" 
-#include "DEV_Switches.h"
+// #include "DEV_Switches.h"
 // #include "DEV_Fan_Regulator.h"
 #include "DEV_AC.h"
 
@@ -40,6 +40,9 @@
 // #define Relay_6 25
 // #define Relay_7 33
 // #define Relay_8 32
+
+#define Status_LED      2
+#define Control_Button  25
 
 void setup() {
 
@@ -84,10 +87,12 @@ void setup() {
   time_init();
   //pin_extender pcf8574 initiation
   setup_pin_extender();
+  setup_IR_recv();
 
-  homeSpan.setStatusPin(2);
+  homeSpan.setStatusPin(Status_LED);
+  homeSpan.setControlPin(Control_Button);
 
-  // homeSpan.enableOTA(); //void enableOTA(boolean auth=true, boolean safeLoad=true)
+  homeSpan.enableOTA(); //void enableOTA(boolean auth=true, boolean safeLoad=true)
   homeSpan.begin(Category::Bridges,"Smart Room");
   
   new SpanAccessory();                            // This first Accessory is the new "Bridge" Accessory.  It contains no functional Services, just the Accessory Information Service
