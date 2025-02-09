@@ -59,9 +59,19 @@ jobs:
         continue-on-error: true
         run: |
           MAX_OTA_SIZE=1310720  # 1.25MB in bytes for ESP32's OTA partition
-          BINARY_SIZE=$(stat -f %z .pio/build/esp32doit-devkit-v1/firmware.bin || stat -c %s .pio/build/esp32doit-devkit-v1/firmware.bin)
+          FIRMWARE_PATH=".pio/build/esp32doit-devkit-v1/firmware.bin"
+
+          if [ ! -f "$FIRMWARE_PATH" ]; then
+            echo "Error: Firmware file not found at $FIRMWARE_PATH"
+            echo "OTA_STATUS=Build failed - no firmware" >> $GITHUB_ENV
+            echo "check_failed=true" >> $GITHUB_ENV
+            exit 1
+          fi
+
+          BINARY_SIZE=$(stat -c%s "$FIRMWARE_PATH")
           echo "Binary size: $BINARY_SIZE bytes"
           echo "Maximum OTA size: $MAX_OTA_SIZE bytes"
+
           if [ "$BINARY_SIZE" -gt "$MAX_OTA_SIZE" ]; then
             echo "OTA_STATUS=exceeded ($BINARY_SIZE bytes)" >> $GITHUB_ENV
             echo "check_failed=true" >> $GITHUB_ENV
