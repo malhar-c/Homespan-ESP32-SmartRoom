@@ -58,19 +58,19 @@ jobs:
         id: ota_check
         continue-on-error: true
         run: |
-          # Default value in bytes ~ 1.25MB (should only be used if nothing is found)
+          # Default max OTA size in bytes (only used if no OTA partition is found)
           DEFAULT_MAX_OTA_SIZE=1310720
 
           # Retrieve partition file name from platformio.ini
           PARTITION_LINE=$(grep "board_build.partitions" platformio.ini || true)
           if [ -z "$PARTITION_LINE" ]; then
-              echo "No board_build.partitions found in platformio.ini."
+              echo "No board_build.partitions found in platformio.ini, using default max OTA size of 1.25MB."
               MAX_OTA_SIZE=$DEFAULT_MAX_OTA_SIZE
           else
               PARTITION_FILENAME=$(echo "$PARTITION_LINE" | cut -d '=' -f2 | tr -d ' ')
               echo "Partition filename from platformio.ini: $PARTITION_FILENAME"
               
-              # Locate locally or download it from Espressif GitHub
+              # Try to locate the partition file locally
               PARTITION_FILE=$(find . -type f -name "$PARTITION_FILENAME" | head -n 1)
               if [ -z "$PARTITION_FILE" ]; then
                   echo "Partition file $PARTITION_FILENAME not found locally. Downloading..."
@@ -85,11 +85,11 @@ jobs:
               fi
               
               if [ -n "$PARTITION_FILE" ]; then
-                  # Look for the "app0" partition entry (which corresponds to ota0)
-                  PARTITION_ENTRY=$(awk -F'[ \t]+' '$1=="app0" {print $0}' "$PARTITION_FILE")
+                  # Since the file is CSV, use comma as the delimiter and skip the header line.
+                  PARTITION_ENTRY=$(awk -F, 'NR>1 { gsub(/^ +| +$/, "", $1); if ($1=="app0") print $0 }' "$PARTITION_FILE")
                   if [ -z "$PARTITION_ENTRY" ]; then
                       echo "app0 partition not found; trying app1..."
-                      PARTITION_ENTRY=$(awk -F'[ \t]+' '$1=="app1" {print $0}' "$PARTITION_FILE")
+                      PARTITION_ENTRY=$(awk -F, 'NR>1 { gsub(/^ +| +$/, "", $1); if ($1=="app1") print $0 }' "$PARTITION_FILE")
                   fi
                   
                   if [ -z "$PARTITION_ENTRY" ]; then
@@ -97,14 +97,10 @@ jobs:
                       MAX_OTA_SIZE=$DEFAULT_MAX_OTA_SIZE
                   else
                       echo "Found partition entry: $PARTITION_ENTRY"
-                      # Extract the partition size from the 5th column
-                      SIZE_HEX=$(echo "$PARTITION_ENTRY" | awk '{print $5}')
-                      SIZE_HEX=$(echo "$SIZE_HEX" | tr -d '[:space:]')
-                      echo "Extracted OTA partition size (hex): $SIZE_HEX"
-                      if [[ $SIZE_HEX == 0x* ]]; then
-                          MAX_OTA_SIZE=$(printf "%d" "$SIZE_HEX")
-                      else
-                          MAX_OTA_SIZE="$SIZE_HEX"
+                      # Extract the size from the 5th column and trim spaces
+                      MAX_OTA_SIZE=$(echo "$PARTITION_ENTRY" | awk -F, '{ gsub(/^ +| +$/, "", $5); print $5 }')
+                      if [[ $MAX_OTA_SIZE == 0x* ]]; then
+                          MAX_OTA_SIZE=$(printf "%d" "$MAX_OTA_SIZE")
                       fi
                   fi
               fi
