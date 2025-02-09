@@ -58,52 +58,72 @@ jobs:
         id: ota_check
         continue-on-error: true
         run: |
-          # Retrieve the partition file from platformio.ini
-          PARTITION_FILE=$(grep "board_build.partitions" platformio.ini | cut -d '=' -f2 | tr -d ' ')
-          if [ ! -f "$PARTITION_FILE" ]; then
-            echo "Error: Partition file $PARTITION_FILE not found"
-            echo "OTA_STATUS=Build failed - missing partition file" >> $GITHUB_ENV
-            echo "check_failed=true" >> $GITHUB_ENV
-            exit 1
+          # Default max OTA size in bytes (1.25 MB)
+          DEFAULT_MAX_OTA_SIZE=1310720
+
+          # Try to grab the partition information from platformio.ini
+          PARTITION_LINE=$(grep "board_build.partitions" platformio.ini || true)
+          if [ -z "$PARTITION_LINE" ]; then
+              echo "No board_build.partitions found in platformio.ini, using default max OTA size of 1.25MB."
+              MAX_OTA_SIZE=$DEFAULT_MAX_OTA_SIZE
+          else
+              PARTITION_FILENAME=$(echo "$PARTITION_LINE" | cut -d '=' -f2 | tr -d ' ')
+              echo "Partition filename from platformio.ini: $PARTITION_FILENAME"
+
+              # Attempt to locate the partition file locally
+              PARTITION_FILE=$(find . -type f -name "$PARTITION_FILENAME" | head -n 1)
+              if [ -z "$PARTITION_FILE" ]; then
+                  echo "Partition file $PARTITION_FILENAME not found locally. Downloading it..."
+                  curl -o "$PARTITION_FILENAME" https://raw.githubusercontent.com/espressif/arduino-esp32/master/tools/partitions/$PARTITION_FILENAME
+                  if [ ! -f "$PARTITION_FILENAME" ]; then
+                      echo "Warning: Unable to download the partition file $PARTITION_FILENAME. Using default max OTA size of 1.25MB."
+                      MAX_OTA_SIZE=$DEFAULT_MAX_OTA_SIZE
+                  else
+                      PARTITION_FILE="$PARTITION_FILENAME"
+                      echo "Downloaded partition file and saved as $PARTITION_FILE"
+                  fi
+              fi
+
+              # If a partition file is available, try to parse it to find the factory partition.
+              if [ -n "$PARTITION_FILE" ]; then
+                  FACTORY_PARTITION=$(awk -F, '$1 ~ /factory/ {print $0}' "$PARTITION_FILE")
+                  if [ -z "$FACTORY_PARTITION" ]; then
+                      echo "Warning: Factory partition not found in $PARTITION_FILE. Using default max OTA size of 1.25MB."
+                      MAX_OTA_SIZE=$DEFAULT_MAX_OTA_SIZE
+                  else
+                      MAX_OTA_SIZE=$(echo "$FACTORY_PARTITION" | awk -F, '{gsub(/^[ \t]+|[ \t]+$/, "", $5); print $5}')
+                      if [[ $MAX_OTA_SIZE == 0x* ]]; then
+                          MAX_OTA_SIZE=$(printf "%d" "$MAX_OTA_SIZE")
+                      fi
+                  fi
+              else
+                  echo "No partition file found; using default max OTA size of 1.25MB."
+                  MAX_OTA_SIZE=$DEFAULT_MAX_OTA_SIZE
+              fi
           fi
 
-          # Extract the line corresponding to the firmware partition (commonly "factory")
-          FACTORY_PARTITION=$(awk -F, '$1 ~ /factory/ {print $0}' "$PARTITION_FILE")
-          if [ -z "$FACTORY_PARTITION" ]; then
-            echo "Error: Factory partition not found in $PARTITION_FILE"
-            echo "OTA_STATUS=Build failed - no firmware partition" >> $GITHUB_ENV
-            echo "check_failed=true" >> $GITHUB_ENV
-            exit 1
-          fi
+          echo "Maximum OTA size: $MAX_OTA_SIZE bytes"
 
-          # Assume the size is in the 5th column; trim whitespace and check if it's hex
-          MAX_OTA_SIZE=$(echo "$FACTORY_PARTITION" | awk -F, '{gsub(/^[ \t]+|[ \t]+$/, "", $5); print $5}')
-          if [[ $MAX_OTA_SIZE == 0x* ]]; then
-              MAX_OTA_SIZE=$(printf "%d" "$MAX_OTA_SIZE")
-          fi
-
-          echo "Maximum OTA size determined from partition file: $MAX_OTA_SIZE bytes"
-
+          # Locate and check the firmware binary
           FIRMWARE_PATH=".pio/build/esp32doit-devkit-v1/firmware.bin"
           if [ ! -f "$FIRMWARE_PATH" ]; then
-            echo "Error: Firmware file not found at $FIRMWARE_PATH"
-            echo "OTA_STATUS=Build failed - no firmware" >> $GITHUB_ENV
-            echo "check_failed=true" >> $GITHUB_ENV
-            exit 1
+              echo "Error: Firmware file not found at $FIRMWARE_PATH"
+              echo "OTA_STATUS=Build failed - no firmware" >> $GITHUB_ENV
+              echo "check_failed=true" >> $GITHUB_ENV
+              exit 1
           fi
 
           BINARY_SIZE=$(stat -c%s "$FIRMWARE_PATH")
           echo "Binary size: $BINARY_SIZE bytes"
-          echo "Maximum OTA size: $MAX_OTA_SIZE bytes"
 
           if [ "$BINARY_SIZE" -gt "$MAX_OTA_SIZE" ]; then
-            echo "OTA_STATUS=exceeded ($BINARY_SIZE bytes)" >> $GITHUB_ENV
-            echo "check_failed=true" >> $GITHUB_ENV
-            exit 1
+              echo "OTA_STATUS=exceeded ($BINARY_SIZE bytes)" >> $GITHUB_ENV
+              echo "check_failed=true" >> $GITHUB_ENV
+              exit 1
           else
-            PERCENT_USED=$((BINARY_SIZE * 100 / MAX_OTA_SIZE))
-            echo "OTA_STATUS=ready ($PERCENT_USED% used)" >> $GITHUB_ENV
-            echo "check_failed=false" >> $GITHUB_ENV
+              PERCENT_USED=$((BINARY_SIZE * 100 / MAX_OTA_SIZE))
+              echo "OTA_STATUS=ready ($PERCENT_USED% used)" >> $GITHUB_ENV
+              echo "check_failed=false" >> $GITHUB_ENV
           fi
 
       - name: Add OTA Status Badge
