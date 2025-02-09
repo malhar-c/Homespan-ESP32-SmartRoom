@@ -2,9 +2,9 @@ name: PlatformIO CI
 
 on:
   push:
-    branches: ["main"]
+    branches: ["master"]
   pull_request:
-    branches: ["main"]
+    branches: ["master"]
 
 jobs:
   build:
@@ -61,7 +61,7 @@ jobs:
         with:
           auth: ${{ secrets.GIST_SECRET }}
           gistID: 46292c13ab8c70e68aa9619cad1d9560
-          filename: esp32-homekit-build.json
+          filename: esp32-homekit-SmartRoom-build.json
           label: build
           message: ${{ job.status }}
           color: ${{ job.status == 'success' && 'success' || 'critical' }}
