@@ -1,6 +1,7 @@
 // DHT settings starts
 #include "DHT.h"
 #include "DEV_Switches.h"
+#include "pins_config.h"
 #define DHTPIN 23     // DHT sensor pin connected to GPIO23
 #define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
@@ -205,7 +206,7 @@ struct DEV_Smart_AC : Service::HeaterCooler
       ac.off();
       AC_on_off = 0;
       ac.send();
-      display_stuff(AC_set_temp, AC_on_off, AC_mode, fan_speed_for_display, PIR_automatic, 1);
+      display_stuff(AC_set_temp, AC_on_off, AC_mode, fan_speed_for_display, false, 1);
     }
 
     // ac.send(); //fire the IR blaster/commit AC control operation
@@ -234,9 +235,8 @@ struct DEV_Smart_AC : Service::HeaterCooler
     // display_time();
     if(curr_temp->timeVal() > 2000)
     {
-      if(active->getNewVal() == 0) //when the AC is off update the time every 2 sec
-      {
-        display_time_large(PIR_automatic, actual_relay_state);
+      if(active->getNewVal() == 0) {
+        display_time_large(false, actual_relay_state);
       }
       // display_stuff(set_cooling_temp->getNewVal(), active->getNewVal()); // for time display (update every 1s)
       if(dht.readTemperature() > 0 && dht.readTemperature() < 50) //checking if the temp value is not bugged
@@ -385,7 +385,7 @@ struct DEV_AC_Fan : Service::Fan
     {
       // fan_Active->setVal(1); //if the ac is on, turn on the ac fan too (only for Home app ui fn)
       Serial.printf("  %s\n", ac.toString().c_str());
-      display_stuff(AC_set_temp, AC_on_off, AC_mode, fan_speed_for_display, PIR_automatic, 1);
+      display_stuff(AC_set_temp, AC_on_off, AC_mode, fan_speed_for_display, false, 1);
       ac.send(); //only fire IR for fan settings when the AC is on
     }   
 
@@ -411,11 +411,6 @@ struct DEV_AC_Fan : Service::Fan
     } 
     else{
       fan_Active->setVal(0); // when the AC is off turn the ac fann too
-    }
-
-    if(PIR_change_detected(PIR_motion_sensor))
-    {
-      display_stuff(AC_set_temp, AC_on_off, AC_mode, fan_speed_for_display, PIR_automatic, 1);
     }
   }
 };
