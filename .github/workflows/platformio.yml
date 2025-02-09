@@ -58,9 +58,33 @@ jobs:
         id: ota_check
         continue-on-error: true
         run: |
-          MAX_OTA_SIZE=1310720  # 1.25MB in bytes for ESP32's OTA partition
-          FIRMWARE_PATH=".pio/build/esp32doit-devkit-v1/firmware.bin"
+          # Retrieve the partition file from platformio.ini
+          PARTITION_FILE=$(grep "board_build.partitions" platformio.ini | cut -d '=' -f2 | tr -d ' ')
+          if [ ! -f "$PARTITION_FILE" ]; then
+            echo "Error: Partition file $PARTITION_FILE not found"
+            echo "OTA_STATUS=Build failed - missing partition file" >> $GITHUB_ENV
+            echo "check_failed=true" >> $GITHUB_ENV
+            exit 1
+          fi
 
+          # Extract the line corresponding to the firmware partition (commonly "factory")
+          FACTORY_PARTITION=$(awk -F, '$1 ~ /factory/ {print $0}' "$PARTITION_FILE")
+          if [ -z "$FACTORY_PARTITION" ]; then
+            echo "Error: Factory partition not found in $PARTITION_FILE"
+            echo "OTA_STATUS=Build failed - no firmware partition" >> $GITHUB_ENV
+            echo "check_failed=true" >> $GITHUB_ENV
+            exit 1
+          fi
+
+          # Assume the size is in the 5th column; trim whitespace and check if it's hex
+          MAX_OTA_SIZE=$(echo "$FACTORY_PARTITION" | awk -F, '{gsub(/^[ \t]+|[ \t]+$/, "", $5); print $5}')
+          if [[ $MAX_OTA_SIZE == 0x* ]]; then
+              MAX_OTA_SIZE=$(printf "%d" "$MAX_OTA_SIZE")
+          fi
+
+          echo "Maximum OTA size determined from partition file: $MAX_OTA_SIZE bytes"
+
+          FIRMWARE_PATH=".pio/build/esp32doit-devkit-v1/firmware.bin"
           if [ ! -f "$FIRMWARE_PATH" ]; then
             echo "Error: Firmware file not found at $FIRMWARE_PATH"
             echo "OTA_STATUS=Build failed - no firmware" >> $GITHUB_ENV
