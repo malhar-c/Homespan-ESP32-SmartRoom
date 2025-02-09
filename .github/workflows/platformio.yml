@@ -3,6 +3,8 @@ name: PlatformIO CI
 on:
   push:
     branches: ["master"]
+  pull_request:
+    branches: ["master"]
 
 jobs:
   build:
@@ -41,7 +43,8 @@ jobs:
         run: pio run
 
       - name: Add Build Status Badge
-        uses: schneegans/dynamic-badges-action@v1.6.0
+        continue-on-error: true
+        uses: schneegans/dynamic-badges-action@v1.7.0
         with:
           auth: ${{ secrets.GIST_SECRET }}
           gistID: 46292c13ab8c70e68aa9619cad1d9560
@@ -49,6 +52,7 @@ jobs:
           label: build
           message: ${{ job.status }}
           color: ${{ job.status == 'success' && 'success' || 'critical' }}
+          namedLogo: github-actions
 
       - name: Check OTA Size
         run: |
@@ -67,7 +71,8 @@ jobs:
 
       - name: Add OTA Status Badge
         if: always()
-        uses: schneegans/dynamic-badges-action@v1.6.0
+        continue-on-error: true
+        uses: schneegans/dynamic-badges-action@v1.7.0
         with:
           auth: ${{ secrets.GIST_SECRET }}
           gistID: 46292c13ab8c70e68aa9619cad1d9560
@@ -75,3 +80,4 @@ jobs:
           label: OTA
           message: ${{ env.OTA_STATUS }}
           color: ${{ contains(env.OTA_STATUS, 'exceeded') && 'critical' || 'success' }}
+          namedLogo: github-actions
