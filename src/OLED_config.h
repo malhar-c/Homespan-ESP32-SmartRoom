@@ -3,7 +3,9 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include "Fonts_OLED_Display/Org_01.h"
+#include "pins_config.h"
 
+// #define PIR_motion_sensor 13  // PIR sensor connected to GPIO13
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 

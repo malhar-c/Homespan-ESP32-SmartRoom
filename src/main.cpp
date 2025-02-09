@@ -31,7 +31,7 @@
 // #include "DEV_Switches.h"
 // #include "DEV_Fan_Regulator.h"
 #include "DEV_AC.h"
-
+#include "DEV_Motion_Sensor.h"
 // #define Relay_1 15
 // #define Relay_2 26
 // #define Relay_3 5
@@ -129,6 +129,12 @@ void setup() {
       new Characteristic::Name("Ceiling Fan");  
     new DEV_Ceiling_Fan;
 
+  new SpanAccessory();
+    new Service::AccessoryInformation();
+        new Characteristic::Identify(); 
+        new Characteristic::Name("Motion Sensor");
+    new DEV_Motion_Sensor;
+
   // new SpanAccessory();                            
   //   new Service::AccessoryInformation();    
   //     new Characteristic::Identify();               
@@ -166,6 +172,8 @@ void setup() {
       // new Characteristic::Active();
       // new Characteristic::Name("AC_Fan");
     new DEV_AC_Fan;
+
+  
 
 } // end of setup()
 

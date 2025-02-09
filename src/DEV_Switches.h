@@ -11,8 +11,6 @@ PCF8574 pin_ext_2(0x3A);
 
 #define man_sw_1 18
 
-#define PIR_motion_sensor 13
-
 const uint16_t kRecvPin = 14;
 const uint32_t kBaudRate = 115200;
 const uint16_t kCaptureBufferSize = 1024;
@@ -38,20 +36,14 @@ decode_results results;  // Somewhere to store the results
 #define rot_4_input   7 //extender 2 pin 7
 
 //on off states of switches
-bool Switch_On_Off_State[5];
+bool Switch_On_Off_State[5] = {0, 0, 0, 0, 0};  // Initialize all switches to OFF
 bool IR_switch_state[5];
 bool actual_relay_state[7];
-bool Rotary_state[4];
+bool Rotary_state[4] = {0, 0, 0, 0};  // Initialize all rotary positions to OFF
 
 //Input switch filtering vlaues
 #define Switch_input_noise_fix_delay 15
 #define Switch_debounce_delay 100
-
-
-bool PIR_ready = 1;  //This should be automatically set to 1 after 60 seconds of device switch on
-bool PIR_automatic = 1; //This can be set to 0 if I want to go manual mode
-bool pir_state_change = 0;
-bool pir_previous_state;
 
 bool previous_state;
 bool state_change;
@@ -71,16 +63,15 @@ void setup_pin_extender()
   pin_ext_2.pinMode(sw3_input, INPUT_PULLUP);
   pin_ext_2.pinMode(sw4_input, INPUT_PULLUP);
   pin_ext_2.pinMode(sw5_input, INPUT_PULLUP);
-  pin_ext_2.pinMode(rot_1_input, INPUT);
-  pin_ext_2.pinMode(rot_2_input, INPUT);
-  pin_ext_2.pinMode(rot_3_input, INPUT);
-  pin_ext_2.pinMode(rot_4_input, INPUT); 
-
-  // pin_ext_1.digitalWrite(sw1_input, HIGH); //doesnt work
+  pin_ext_2.pinMode(rot_1_input, INPUT_PULLUP);  // Use pullup for rotary inputs
+  pin_ext_2.pinMode(rot_2_input, INPUT_PULLUP);
+  pin_ext_2.pinMode(rot_3_input, INPUT_PULLUP);
+  pin_ext_2.pinMode(rot_4_input, INPUT_PULLUP);
 
   //begin
   pin_ext_1.begin();
   pin_ext_2.begin();
+
 }
 
 void setup_IR_recv()
@@ -98,76 +89,44 @@ void setup_IR_recv()
 // prototypes
 int invert_state(int);
 bool Switch_pressed(short);
-bool PIR_change_detected(short);
 bool sw1_state_changed();
 void IR_recv_update(); //function will capture any IR signal and update the states of relays
 bool IR_trigger_handler(); //function to handle the IR triggred state as the actual IR recv updation loop cannot be called again and again
 bool rotary_manual();
 
-struct DEV_Light_pair_1 : Service::LightBulb {               // ON/OFF LED
-
-  // int relayPin;                                       // pin number defined for this LED
-  SpanCharacteristic *power;                        // reference to the On Characteristic
-  
-  DEV_Light_pair_1() : Service::LightBulb()
-  {       // constructor() method
-
-    power=new Characteristic::On(0, true);                 
-    // this->relayPin=relayPin;                            
-    pin_ext_1.pinMode(P0, OUTPUT);
-    update(); //update the relays according to the NVS stored value (in case of accidental reboot)                       
+struct DEV_Light_pair_1 : Service::LightBulb {
+    SpanCharacteristic *power;
     
-  } // end constructor
-
-  boolean update(){                              // update() method
-
-    // digitalWrite(relayPin,power->getNewVal()); 
-    pin_ext_1.digitalWrite(P0, power->getNewVal());
-    // pin_ext_1.digitalWrite(P0, HIGH);
-    // power->setVal(1);
-    return(true);                               // return true
-  
-  } // update
-
-  void loop()
-  {
-    if(sw1_state_changed() && !reboot)
-    {
-      Serial.print(" Sw 1 STATE CHANGED --> ");
-      Serial.println(Switch_On_Off_State[0]);
-      // delay(Switch_debounce_delay); //debouce delay
-      power->setVal(invert_state(Switch_On_Off_State[0])); //updating in the home app ui
-      update(); //call the update function to make the relay go brrrrrr
+    DEV_Light_pair_1() : Service::LightBulb() {
+        power = new Characteristic::On(0, true);                 
+        pin_ext_1.pinMode(P0, OUTPUT);
+        update();                      
     }
 
-    // Serial.print(PIR_ready);
-    // Serial.print(PIR_automatic);
-    // Serial.println(PIR_change_detected(PIR_motion_sensor));
-    //PIR motion sensor for main light pair
-    if(PIR_ready && PIR_automatic && PIR_change_detected(PIR_motion_sensor)){
-      Serial.println(" PIR state change detected --- ");
-      Serial.println(PIR_change_detected(PIR_motion_sensor));
-      Serial.println(digitalRead(PIR_motion_sensor));
-      delay(10); //delay to counteract noise if any
-      power->setVal(digitalRead(PIR_motion_sensor));
-      update();
+    boolean update() {
+        pin_ext_1.digitalWrite(P0, power->getNewVal());
+        return(true);
     }
-    
-    IR_recv_update(); //only call this once to update all the states and update the IR_triggered bool value
-    if(IR_trigger_handler() && IR_triggered == 1 && !reboot){
-      power->setVal(IR_switch_state[0]);
-      Serial.println("inside IR switch 1");
-      IR_triggered = 0;
-      update();
-    }
-    else{
-      IR_switch_state[0] = power->getNewVal();
-    }
-    
-    actual_relay_state[0] = power->getNewVal();
 
-    reboot = 0;
-  }
+    void loop() {
+        if(sw1_state_changed() && !reboot) {
+            power->setVal(invert_state(Switch_On_Off_State[0]));
+            update();
+        }
+        
+        IR_recv_update();
+        if(IR_trigger_handler() && IR_triggered == 1 && !reboot) {
+            power->setVal(IR_switch_state[0]);
+            IR_triggered = 0;
+            update();
+        }
+        else {
+            IR_switch_state[0] = power->getNewVal();
+        }
+        
+        actual_relay_state[0] = power->getNewVal();
+        reboot = 0;
+    }
 };
 
 //Light pair 2 relay control
@@ -342,12 +301,14 @@ struct DEV_Ceiling_Fan : Service::Fan {               // ON/OFF LED
   // int relayPin_FullSpeed = 32;
   SpanCharacteristic *FanSpeed;                        // reference to the speed Characteristic
   SpanCharacteristic *power;
+  unsigned long bootTime;
   
   DEV_Ceiling_Fan() : Service::Fan()
   {       // constructor() method
 
-    power = new Characteristic::Active(0, true);                                   // NEW: This allows control of the Rotation Direction of the Fan
-      FanSpeed = (new Characteristic::RotationSpeed(75, true))->setRange(0,100,25);
+    // Initialize with fan OFF and speed 0
+    power = new Characteristic::Active(0, true);
+    FanSpeed = (new Characteristic::RotationSpeed(0, true))->setRange(0,100,25);
     
     // power=new Characteristic::On();                 
     // this->relayPin=relayPin;  
@@ -358,89 +319,94 @@ struct DEV_Ceiling_Fan : Service::Fan {               // ON/OFF LED
     pin_ext_1.pinMode(P4, OUTPUT);
     pin_ext_1.pinMode(P5, OUTPUT);
     pin_ext_1.pinMode(P6, OUTPUT);
-    update(); //update the relays according to the NVS stored value (in case of accidental reboot)
-
-  } // end constructor
+    
+    // Set all relays to OFF state initially
+    pin_ext_1.digitalWrite(P4, LOW);
+    pin_ext_1.digitalWrite(P5, LOW);
+    pin_ext_1.digitalWrite(P6, LOW);
+    
+    // Initialize relay state array
+    actual_relay_state[4] = 0;
+    actual_relay_state[5] = 0;
+    actual_relay_state[6] = 0;
+    
+    bootTime = millis();  // Record boot time
+  }
 
   boolean update(){                              // update() method
 
-    // digitalWrite(relayPin,power->getNewVal());
-    // P4 ---> relay 7
-    // P5 ---> relay 6
-    // P6 ---> relay 5
-
-    if(power->getNewVal())
-    {
-      switch (FanSpeed->getNewVal())
-      {
-      case 0: //when speed is 0
+    // Only update if power state changes or if fan is ON and speed changes
+    if (!power->getNewVal()) {
         pin_ext_1.digitalWrite(P4, LOW);
-        // pin_ext_1.digitalWrite(P3, power->getNewVal());
         pin_ext_1.digitalWrite(P5, LOW);
         pin_ext_1.digitalWrite(P6, LOW);
         actual_relay_state[4] = 0;
         actual_relay_state[5] = 0;
         actual_relay_state[6] = 0;
-        break;
-    
-      case 25: //when the speed is 25% (Speed position 1)
-        pin_ext_1.digitalWrite(P4, LOW);
-        pin_ext_1.digitalWrite(P5, LOW);
-        pin_ext_1.digitalWrite(P6, HIGH);
-        actual_relay_state[4] = 1;
-        actual_relay_state[5] = 0;
-        actual_relay_state[6] = 0;
-        break;
-
-      case 50: //when the speed is 50% (Speed position 2)
-        pin_ext_1.digitalWrite(P4, LOW);
-        pin_ext_1.digitalWrite(P5, HIGH);
-        pin_ext_1.digitalWrite(P6, LOW);
-        actual_relay_state[4] = 0;
-        actual_relay_state[5] = 1;
-        actual_relay_state[6] = 0;
-        break;
-
-      case 75: //speed is 75% or speed position 3
-        pin_ext_1.digitalWrite(P4, LOW);
-        pin_ext_1.digitalWrite(P5, HIGH);
-        pin_ext_1.digitalWrite(P6, HIGH);
-        actual_relay_state[4] = 1;
-        actual_relay_state[5] = 1;
-        actual_relay_state[6] = 0;
-        break;
-
-      case 100: //speed is 100% full speed position 4
-        pin_ext_1.digitalWrite(P4, HIGH);
-        pin_ext_1.digitalWrite(P5, LOW);
-        pin_ext_1.digitalWrite(P6, LOW);
-        actual_relay_state[4] = 0;
-        actual_relay_state[5] = 0;
-        actual_relay_state[6] = 1;
-        break;
-    
-      default:
-        break;
-      }
+        return true;
     }
 
-    else //turn it off
-    {
-      pin_ext_1.digitalWrite(P4, LOW);
-      pin_ext_1.digitalWrite(P5, LOW);
-      pin_ext_1.digitalWrite(P6, LOW);
-      actual_relay_state[4] = 0;
-      actual_relay_state[5] = 0;
-      actual_relay_state[6] = 0;
+    if (power->getNewVal() && !reboot) {  // Only change speed if not rebooting
+        switch (FanSpeed->getNewVal())
+        {
+        case 0: //when speed is 0
+            pin_ext_1.digitalWrite(P4, LOW);
+            pin_ext_1.digitalWrite(P5, LOW);
+            pin_ext_1.digitalWrite(P6, LOW);
+            actual_relay_state[4] = 0;
+            actual_relay_state[5] = 0;
+            actual_relay_state[6] = 0;
+            break;
+    
+        case 25: //when the speed is 25% (Speed position 1)
+            pin_ext_1.digitalWrite(P4, LOW);
+            pin_ext_1.digitalWrite(P5, LOW);
+            pin_ext_1.digitalWrite(P6, HIGH);
+            actual_relay_state[4] = 1;
+            actual_relay_state[5] = 0;
+            actual_relay_state[6] = 0;
+            break;
+
+        case 50: //when the speed is 50% (Speed position 2)
+            pin_ext_1.digitalWrite(P4, LOW);
+            pin_ext_1.digitalWrite(P5, HIGH);
+            pin_ext_1.digitalWrite(P6, LOW);
+            actual_relay_state[4] = 0;
+            actual_relay_state[5] = 1;
+            actual_relay_state[6] = 0;
+            break;
+
+        case 75: //speed is 75% or speed position 3
+            pin_ext_1.digitalWrite(P4, LOW);
+            pin_ext_1.digitalWrite(P5, HIGH);
+            pin_ext_1.digitalWrite(P6, HIGH);
+            actual_relay_state[4] = 1;
+            actual_relay_state[5] = 1;
+            actual_relay_state[6] = 0;
+            break;
+
+        case 100: //speed is 100% full speed position 4
+            pin_ext_1.digitalWrite(P4, HIGH);
+            pin_ext_1.digitalWrite(P5, LOW);
+            pin_ext_1.digitalWrite(P6, LOW);
+            actual_relay_state[4] = 0;
+            actual_relay_state[5] = 0;
+            actual_relay_state[6] = 1;
+            break;
+    
+        default:
+            break;
+        }
     }
 
-    
     return(true);                               // return true
   
   } // update
 
   void loop(){
-    //write something to control the behaviour of Fan speed and the relays
+    // Ignore rotary inputs for first 5 seconds after boot
+    if (millis() - bootTime < 5000) return;
+
     if (Switch_pressed(sw5_input) && !reboot)
     {
       Serial.print(" Sw 5 STATE CHANGED --> ");
@@ -562,59 +528,71 @@ bool sw1_state_changed()
   return sw1_state_change;
 }
 
-bool PIR_change_detected(short PIR_pin)
-{
-  if(digitalRead(PIR_pin) == pir_previous_state){
-    pir_state_change = 0;
-  }
-  else{
-    pir_state_change = 1;
-  }
-  pir_previous_state = digitalRead(PIR_pin);
-  // Serial.println(pir_previous_state);
-  return pir_state_change;
-}
+bool Rotary_touched(short pin) {
+    static unsigned long lastDebounceTime = 0;
+    const unsigned long debounceDelay = 100;  // 100ms debounce
+    static short lastPin = -1;  // Track last activated pin
 
-bool Rotary_touched(short pin)
-{
-  delay(30);
-  if(pin_ext_2.digitalRead(pin) == Rotary_state[pin-4]){
-    state_change = 0;
-  } 
-  else{
-    state_change = 1;
-  }
-  delay(Switch_input_noise_fix_delay); //noisy input fix
-  Rotary_state[pin-4] = pin_ext_2.digitalRead(pin);
-  // Switch_On_Off_State[0] = sw1_previous_state;
-  return state_change;
+    // Read current state
+    bool currentState = pin_ext_2.digitalRead(pin);
+    if(currentState == Rotary_state[pin-4]){
+        state_change = 0;
+    } 
+    else {
+        // Wait for debounce period
+        if ((millis() - lastDebounceTime) > debounceDelay) {
+            // Only trigger if pin is HIGH (active) and different from last pin
+            state_change = (currentState == HIGH && pin != lastPin);
+            if (state_change) {
+                lastPin = pin;
+            }
+            lastDebounceTime = millis();
+        } else {
+            state_change = 0;
+        }
+    }
+
+    Rotary_state[pin-4] = currentState;
+    return state_change;
 }
 
 bool rotary_manual()
 {
-  if(Rotary_touched(rot_1_input)){
-    //state update
-    rotary_pos = 1;
-    return 1;
-  }
-  else if(Rotary_touched(rot_2_input)){
-    //state update
-    rotary_pos = 2;
-    return 1;
-  }
-  else if(Rotary_touched(rot_3_input)){
-    // state update
-    rotary_pos = 3;
-    return 1;
-  }
-  else if(Rotary_touched(rot_4_input)){
-    //state update
-    rotary_pos = 4;
-    return 1;
-  }
-  else{
-    return 0;
-  }
+    static unsigned long lastRotaryUpdate = 0;
+    const unsigned long rotaryUpdateDelay = 1000;  // Minimum time between rotary updates
+    // Only process rotary input if fan's main switch is ON
+    if (!Switch_On_Off_State[sw5_input+1]) {
+        return 0;
+    }
+
+    // Only check rotary if enough time has passed
+    if (millis() - lastRotaryUpdate < rotaryUpdateDelay) {
+        return 0;
+    }
+
+    if(Rotary_touched(rot_1_input)){
+        rotary_pos = 1;
+        lastRotaryUpdate = millis();
+        return 1;
+    }
+    else if(Rotary_touched(rot_2_input)){
+        rotary_pos = 2;
+        lastRotaryUpdate = millis();
+        return 1;
+    }
+    else if(Rotary_touched(rot_3_input)){
+        rotary_pos = 3;
+        lastRotaryUpdate = millis();
+        return 1;
+    }
+    else if(Rotary_touched(rot_4_input)){
+        rotary_pos = 4;
+        lastRotaryUpdate = millis();
+        return 1;
+    }
+    else{
+        return 0;
+    }
 }
 
 void IR_recv_update()
@@ -716,9 +694,6 @@ void IR_recv_update()
       {
         //pressed value = EQ
         Serial.println(" EQ pressed ");
-        Serial.print(" Motion detection -- ");
-        PIR_automatic = !PIR_automatic;
-        Serial.println(PIR_automatic);
       }
       else{
         IR_triggered = 0;
